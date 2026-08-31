@@ -516,15 +516,43 @@ function resetFilters() {
 
 // 11. Chart.js 시각화 렌더링
 function renderCharts(stats) {
-    renderYearlyTrendChart(stats.yearly_trend);
-    renderCauseDonutChart(stats.cause_breakdown);
-    renderSidoBarChart(stats.sido_ranking);
-    renderLocationDonutChart(stats.location_breakdown);
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js 라이브러리가 아직 로드되지 않았습니다.');
+        setTimeout(() => renderCharts(stats), 300);
+        return;
+    }
+    if (!stats) return;
+
+    try {
+        if (stats.yearly_trend) renderYearlyTrendChart(stats.yearly_trend);
+    } catch (e) {
+        console.error('연도별 추이 차트 렌더링 실패:', e);
+    }
+
+    try {
+        if (stats.cause_breakdown) renderCauseDonutChart(stats.cause_breakdown);
+    } catch (e) {
+        console.error('발화원인 차트 렌더링 실패:', e);
+    }
+
+    try {
+        if (stats.sido_ranking) renderSidoBarChart(stats.sido_ranking);
+    } catch (e) {
+        console.error('시도별 차트 렌더링 실패:', e);
+    }
+
+    try {
+        if (stats.location_breakdown) renderLocationDonutChart(stats.location_breakdown);
+    } catch (e) {
+        console.error('장소별 차트 렌더링 실패:', e);
+    }
 }
 
 // (1) 10개년 연도별 발생 및 인명피해 추이 복합 차트
 function renderYearlyTrendChart(trendData) {
-    const ctx = document.getElementById('yearlyTrendChart').getContext('2d');
+    const canvas = document.getElementById('yearlyTrendChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     const labels = trendData.map(d => `${d.year}년`);
     const fireCounts = trendData.map(d => d.count);
     const casualties = trendData.map(d => d.deaths + d.injuries);
@@ -593,9 +621,10 @@ function renderYearlyTrendChart(trendData) {
 
 // (2) 발화원인 도넛 차트
 function renderCauseDonutChart(causeData) {
-    const ctx = document.getElementById('causeDonutChart').getContext('2d');
+    const canvas = document.getElementById('causeDonutChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     const topCauses = causeData.slice(0, 6);
-    // 각 요소별 명칭 옆에 점유율 % 명시
     const labels = topCauses.map(c => `${c.cause} (${c.percentage}%)`);
     const counts = topCauses.map(c => c.count);
 
@@ -648,7 +677,9 @@ function renderCauseDonutChart(causeData) {
 
 // (3) 시도별 발생 건수 바 차트
 function renderSidoBarChart(sidoData) {
-    const ctx = document.getElementById('sidoBarChart').getContext('2d');
+    const canvas = document.getElementById('sidoBarChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     const topSidos = sidoData.slice(0, 10);
     const labels = topSidos.map(s => s.sido);
     const counts = topSidos.map(s => s.count);
@@ -685,9 +716,10 @@ function renderSidoBarChart(sidoData) {
 
 // (4) 장소별 도넛 차트
 function renderLocationDonutChart(locData) {
-    const ctx = document.getElementById('locationDonutChart').getContext('2d');
+    const canvas = document.getElementById('locationDonutChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     const topLocs = locData.slice(0, 5);
-    // 각 장소별 명칭 옆에 점유율 % 명시
     const labels = topLocs.map(l => `${l.location} (${l.percentage}%)`);
     const counts = topLocs.map(l => l.count);
 
