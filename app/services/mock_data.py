@@ -332,8 +332,22 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
         for _ in range(year_total_target):
             max_month = 8 if year == 2026 else 12
             month = random.randint(1, max_month)
-            day = random.randint(1, 28)
-            hour = random.randint(0, 23)
+            
+            # 각 월별 실제 일수 계산 (8월은 31일까지)
+            if month in [1, 3, 5, 7, 8, 10, 12]:
+                max_d = 31
+            elif month == 2:
+                max_d = 29 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 28
+            else:
+                max_d = 30
+
+            day = random.randint(1, max_d)
+            
+            # 2026년 8월 31일 오늘은 현재 시간(23시) 이전까지의 시각으로 생성
+            if year == 2026 and month == 8 and day == 31:
+                hour = random.randint(0, 22)
+            else:
+                hour = random.randint(0, 23)
             minute = random.randint(0, 59)
 
             date_obj = datetime(year, month, day, hour, minute)
