@@ -206,7 +206,7 @@ async def search_fire_data(
     # 실제 통계 산출
     real_stat = calculate_real_fire_stats(
         start_year=start_year or 2016,
-        end_year=end_year or 2025,
+        end_year=end_year or 2026,
         sido=sido,
         sigungu=sigungu,
         cause_category=cause_category,
@@ -243,7 +243,7 @@ async def search_fire_data(
 def get_fire_stats(
     keyword: Optional[str] = None,
     start_year: Optional[int] = 2016,
-    end_year: Optional[int] = 2025,
+    end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sido: Optional[str] = None,
@@ -254,9 +254,9 @@ def get_fire_stats(
     min_damage: Optional[int] = None,
     has_deaths: Optional[bool] = None
 ):
-    """현재 필터링 조건에 따른 10개년(2016~2025) 대한민국 소방청 100% 실제 통계 요약 및 차트 데이터 산출"""
+    """현재 필터링 조건에 따른 대한민국 소방청 100% 실제 통계 요약 및 차트 데이터 산출"""
     s_yr = start_year or 2016
-    e_yr = end_year or 2025
+    e_yr = end_year or 2026
 
     # 100% 실제 소방 통계 연감 기반 계산
     real_stat = calculate_real_fire_stats(

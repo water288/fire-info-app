@@ -242,21 +242,41 @@ function setYearPreset(preset) {
     const startSel = document.getElementById('startYearSelect');
     const endSel = document.getElementById('endYearSelect');
 
+    ensureYearOption(startSel, 2026);
+    ensureYearOption(endSel, 2026);
+
     if (preset === 'all') {
-        startSel.value = 2016;
-        endSel.value = 2026;
+        startSel.value = "2016";
+        endSel.value = "2026";
     } else if (preset === 'recent3') {
-        startSel.value = 2024;
-        endSel.value = 2026;
+        startSel.value = "2024";
+        endSel.value = "2026";
     } else if (preset === 'recent5') {
-        startSel.value = 2022;
-        endSel.value = 2026;
+        startSel.value = "2022";
+        endSel.value = "2026";
     } else {
-        startSel.value = preset;
-        endSel.value = preset;
+        startSel.value = String(preset);
+        endSel.value = String(preset);
     }
 
     applyFilters(1);
+}
+
+function ensureYearOption(selectEl, year) {
+    if (!selectEl) return;
+    let found = false;
+    for (let i = 0; i < selectEl.options.length; i++) {
+        if (selectEl.options[i].value === String(year)) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        const opt = document.createElement('option');
+        opt.value = String(year);
+        opt.text = `${year}년 (현재)`;
+        selectEl.appendChild(opt);
+    }
 }
 
 // 필터 파라미터 빌드
