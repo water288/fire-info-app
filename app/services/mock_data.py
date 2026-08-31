@@ -143,6 +143,26 @@ LOCATION_RATIOS = {
     "위험물/저장시설": 0.03
 }
 
+SIDO_ALIASES = {
+    "서울": "서울특별시",
+    "경기": "경기도",
+    "인천": "인천광역시",
+    "부산": "부산광역시",
+    "대구": "대구광역시",
+    "광주": "광주광역시",
+    "대전": "대전광역시",
+    "울산": "울산광역시",
+    "세종": "세종특별자치시",
+    "강원": "강원특별자치도",
+    "충북": "충청북도",
+    "충남": "충청남도",
+    "전북": "전북특별자치도",
+    "전남": "전라남도",
+    "경북": "경상북도",
+    "경남": "경상남도",
+    "제주": "제주특별자치도"
+}
+
 def calculate_real_fire_stats(
     start_year: int = 2016,
     end_year: int = 2025,
@@ -156,7 +176,14 @@ def calculate_real_fire_stats(
     # 키워드가 전달되었을 때 지역명, 원인명 자동 감지
     kw = (keyword or "").strip()
     if kw:
-        # 시군구명 자동 감지 (예: '청주시', '청주', '충주시', '강남구' 등)
+        # 1. 시도 줄임말 또는 전체명 매칭 (예: '충북', '충청북도', '경남', '서울' 등)
+        if not sido:
+            for alias, full_sido in SIDO_ALIASES.items():
+                if alias in kw or full_sido in kw:
+                    sido = full_sido
+                    break
+
+        # 2. 시군구명 자동 감지 (예: '청주시', '청주', '충주시', '강남구', '해운대구' 등)
         if not sigungu:
             for s_name, sgg_list in REGIONS.items():
                 for sgg in sgg_list:
@@ -168,23 +195,15 @@ def calculate_real_fire_stats(
                         break
                 if sigungu:
                     break
-        
-        # 시도명 자동 감지 (예: '충북', '충청북도', '서울', '경기' 등)
-        if not sido:
-            for s_name in REGIONS.keys():
-                short_name = s_name[:2]
-                if s_name in kw or short_name in kw:
-                    sido = s_name
-                    break
 
-        # 발화원인 자동 감지
+        # 3. 발화원인 자동 감지
         if not cause_category:
             for c_name in CAUSE_RATIOS.keys():
                 if c_name in kw or (len(c_name) >= 2 and c_name[:2] in kw):
                     cause_category = c_name
                     break
 
-        # 발생장소 자동 감지
+        # 4. 발생장소 자동 감지
         if not location_category:
             for l_name in LOCATION_RATIOS.keys():
                 if l_name in kw or (len(l_name) >= 2 and l_name[:2] in kw):

@@ -83,10 +83,18 @@ def filter_and_sort_records(
         if min_damage is not None and r.property_damage < min_damage:
             continue
 
-        # 검색어 키워드 (지역, 장소, 원인, 요약 등 검색)
+        # 검색어 키워드 (지역, 시도 약칭, 장소, 원인, 요약 등 지능형 검색)
         if keyword:
             kw = keyword.strip().lower()
-            text_target = f"{r.sido} {r.sigungu} {r.eupmyeondong} {r.location_category} {r.location_detail} {r.cause_category} {r.cause_detail} {r.summary}".lower()
+            # 시도 약칭 매핑 (충청북도 -> 충북, 경상남도 -> 경남 등)
+            sido_alias = ""
+            for a, full in [("충북", "충청북도"), ("충남", "충청남도"), ("전북", "전북특별자치도"), ("전남", "전라남도"), ("경북", "경상북도"), ("경남", "경상남도"), ("강원", "강원특별자치도"), ("제주", "제주특별자치도"), ("서울", "서울특별시"), ("경기", "경기도"), ("인천", "인천광역시"), ("부산", "부산광역시"), ("대구", "대구광역시"), ("광주", "광주광역시"), ("대전", "대전광역시"), ("울산", "울산광역시"), ("세종", "세종특별자치시")]:
+                if full == r.sido:
+                    sido_alias = a
+                    break
+            
+            sgg_short = r.sigungu.replace("시", "").replace("군", "").replace("구", "") if r.sigungu else ""
+            text_target = f"{r.sido} {sido_alias} {r.sigungu} {sgg_short} {r.eupmyeondong} {r.location_category} {r.location_detail} {r.cause_category} {r.cause_detail} {r.summary}".lower()
             if kw not in text_target:
                 continue
 
