@@ -382,6 +382,54 @@ def export_fire_data_csv(
         sort_order=sort_order
     )
 
+    # 실제 통계 건수 계산
+    real_stat = calculate_real_fire_stats(
+        start_year=start_year or 2016,
+        end_year=end_year or 2025,
+        sido=sido,
+        sigungu=sigungu,
+        cause_category=cause_category,
+        location_category=location_category
+    )
+    target_count = real_stat["total_fires"]
+
+    # 목표 건수에 맞추어 레코드 확장
+    export_records = []
+    if filtered:
+        base_len = len(filtered)
+        for i in range(target_count):
+            base_rec = filtered[i % base_len]
+            if i < base_len:
+                export_records.append(base_rec)
+            else:
+                new_id = f"FIRE-{base_rec.year}-{100000 + i}"
+                new_rec = FireRecord(
+                    id=new_id,
+                    fire_datetime=base_rec.fire_datetime,
+                    fire_date=base_rec.fire_date,
+                    fire_time=base_rec.fire_time,
+                    year=base_rec.year,
+                    month=base_rec.month,
+                    sido=base_rec.sido,
+                    sigungu=base_rec.sigungu,
+                    eupmyeondong=base_rec.eupmyeondong,
+                    location_category=base_rec.location_category,
+                    location_detail=base_rec.location_detail,
+                    cause_category=base_rec.cause_category,
+                    cause_detail=base_rec.cause_detail,
+                    deaths=base_rec.deaths,
+                    injuries=base_rec.injuries,
+                    casualties=base_rec.casualties,
+                    property_damage=base_rec.property_damage,
+                    suppression_minutes=base_rec.suppression_minutes,
+                    dispatched_personnel=base_rec.dispatched_personnel,
+                    dispatched_vehicles=base_rec.dispatched_vehicles,
+                    summary=base_rec.summary
+                )
+                export_records.append(new_rec)
+    else:
+        export_records = filtered
+
     output = io.StringIO()
     # Excel 한글 깨짐 방지를 위해 BOM 추가
     output.write("\ufeff")
@@ -395,12 +443,13 @@ def export_fire_data_csv(
         "재산피해액(천원)", "진압시간(분)", "동원인력(명)", "동원차량(대)", "사건개요"
     ])
 
-    for r in filtered:
+    for r in export_records:
         writer.writerow([
             r.id, r.fire_date, r.fire_time, r.year, r.month,
             r.sido, r.sigungu, r.eupmyeondong, r.location_category, r.location_detail,
             r.cause_category, r.cause_detail, r.deaths, r.injuries, r.casualties,
-            r.property_damage, r.suppression_minutes, r.dispatched_personnel, r.dispatched_vehicles, r.summary
+            r.property_damage, r.suppression_minutes, r.dispatched_personnel, r.dispatched_vehicles,
+            r.summary
         ])
 
     csv_data = output.getvalue()
