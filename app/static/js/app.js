@@ -163,10 +163,11 @@ async function loadMetadata() {
         endYearSel.innerHTML = '';
 
         data.years.forEach(y => {
-            const opt1 = new Option(`${y}년`, y);
-            const opt2 = new Option(`${y}년`, y);
+            const label = (y === 2026) ? `${y}년 (현재)` : `${y}년`;
+            const opt1 = new Option(label, y);
+            const opt2 = new Option(label, y);
             if (y === 2016) opt1.selected = true;
-            if (y === 2025) opt2.selected = true;
+            if (y === 2026) opt2.selected = true;
             startYearSel.add(opt1);
             endYearSel.add(opt2);
         });

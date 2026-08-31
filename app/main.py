@@ -141,7 +141,7 @@ from app.services.mock_data import get_fire_dataset, REGIONS, FIRE_CAUSES, LOCAT
 def get_metadata():
     """검색 필터에 필요한 지역, 원인, 장소 메타데이터 반환"""
     return {
-        "years": list(range(2016, 2026)),
+        "years": list(range(2016, 2027)),
         "regions": REGIONS,
         "causes": list(FIRE_CAUSES.keys()),
         "causes_detail": FIRE_CAUSES,
@@ -162,7 +162,7 @@ def get_metadata():
 async def search_fire_data(
     keyword: Optional[str] = None,
     start_year: Optional[int] = 2016,
-    end_year: Optional[int] = 2025,
+    end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sido: Optional[str] = None,
