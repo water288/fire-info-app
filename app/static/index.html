@@ -51,9 +51,9 @@
                     <div>
                         <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
                             소방청 화재 통계 포털
-                            <span class="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800/60 font-medium">2016~2025</span>
+                            <span class="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800/60 font-medium">2007~2026</span>
                         </h1>
-                        <p class="text-[10px] sm:text-xs text-slate-400">10년간 화재발생 검색 · 다차원 정렬 · 통계 분석</p>
+                        <p class="text-[10px] sm:text-xs text-slate-400">화재발생 검색 · 다차원 정렬 · 통계 분석</p>
                     </div>
                 </div>
 
@@ -181,7 +181,7 @@
             <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 class="text-sm font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-chart-column text-red-400"></i>
-                    10개년 화재 동향 및 시각화 분석
+                    화재 동향 및 시각화 분석
                 </h2>
                 <div class="flex items-center gap-2">
                     <button onclick="toggleChartSection()" id="toggleChartBtn" class="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 transition">
@@ -192,10 +192,10 @@
             </div>
 
             <div id="chartContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-5 transition-all duration-300">
-                <!-- 10개년 연도별 발생 추이 (2/3 영역) -->
+                <!-- 연도별 발생 추이 (2/3 영역) -->
                 <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-semibold text-slate-300">연도별 화재 발생 건수 및 인명피해 추이 (2016~2025)</span>
+                        <span class="text-xs font-semibold text-slate-300">연도별 화재 발생 건수 및 인명피해 추이 (2007~2026)</span>
                         <span class="text-[11px] text-slate-500">막대: 발생건수 / 꺾은선: 사상자</span>
                     </div>
                     <div class="relative h-64">
@@ -687,6 +687,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v5"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v6"></script>
 </body>
 </html>
