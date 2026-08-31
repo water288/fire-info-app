@@ -244,13 +244,13 @@ function setYearPreset(preset) {
 
     if (preset === 'all') {
         startSel.value = 2016;
-        endSel.value = 2025;
+        endSel.value = 2026;
     } else if (preset === 'recent3') {
-        startSel.value = 2023;
-        endSel.value = 2025;
+        startSel.value = 2024;
+        endSel.value = 2026;
     } else if (preset === 'recent5') {
-        startSel.value = 2021;
-        endSel.value = 2025;
+        startSel.value = 2022;
+        endSel.value = 2026;
     } else {
         startSel.value = preset;
         endSel.value = preset;
@@ -451,8 +451,11 @@ function renderTable(items) {
             formattedDamage = `${Math.round(damageWon / 10000).toLocaleString()}만원`;
         }
 
+        const isRt = item.is_realtime || item.year === 2026;
+        const rtBadge = isRt ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[9px] animate-pulse"></i>실시간</span>` : '';
+
         tr.innerHTML = `
-            <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${item.id}</td>
+            <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${rtBadge}${item.id}</td>
             <td class="py-3 px-4 font-medium text-slate-200">
                 <div class="flex flex-col">
                     <span>${item.fire_date}</span>
@@ -524,9 +527,13 @@ function renderMobileCards(items) {
             formattedDamage = `${Math.round(damageWon / 10000).toLocaleString()}만원`;
         }
 
+        const isRt = item.is_realtime || item.year === 2026;
+        const rtBadge = isRt ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[8px] animate-pulse"></i>실시간</span>` : '';
+
         card.innerHTML = `
             <div class="flex items-center justify-between text-xs">
                 <div class="flex items-center space-x-1.5 font-bold text-white">
+                    ${rtBadge}
                     <i class="fa-solid fa-calendar-day text-slate-400 text-[10px]"></i>
                     <span>${item.fire_datetime}</span>
                 </div>

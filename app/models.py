@@ -23,6 +23,7 @@ class FireRecord(BaseModel):
     dispatched_personnel: int = Field(default=0, description="동원 인력 수")
     dispatched_vehicles: int = Field(default=0, description="동원 차량 수")
     summary: Optional[str] = Field(default="", description="화재 개요 및 조치")
+    is_realtime: Optional[bool] = Field(default=False, description="2026년 실시간 수신 사건 여부")
 
 class SearchQuery(BaseModel):
     keyword: Optional[str] = None

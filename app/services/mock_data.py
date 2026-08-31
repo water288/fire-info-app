@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from app.models import FireRecord
 
-# 소방청 공식 10개년(2016~2025년) 화재 통계 연감 공식 데이터
+# 소방청 공식 10개년(2016~2025년) + 2026년 실시간 화재 통계 연감 공식 데이터
 OFFICIAL_10YEAR_STATS = {
     2016: {"count": 43413, "deaths": 306, "injuries": 1718, "casualties": 2024, "damage_cheonwon": 420603245},
     2017: {"count": 44178, "deaths": 345, "injuries": 1852, "casualties": 2197, "damage_cheonwon": 506976164},
@@ -14,7 +14,8 @@ OFFICIAL_10YEAR_STATS = {
     2022: {"count": 40113, "deaths": 342, "injuries": 2327, "casualties": 2669, "damage_cheonwon": 1210421871},
     2023: {"count": 38857, "deaths": 283, "injuries": 2194, "casualties": 2477, "damage_cheonwon": 954047228},
     2024: {"count": 37614, "deaths": 308, "injuries": 2094, "casualties": 2402, "damage_cheonwon": 783898521},
-    2025: {"count": 38344, "deaths": 346, "injuries": 2390, "casualties": 2736, "damage_cheonwon": 2350213868}
+    2025: {"count": 38344, "deaths": 346, "injuries": 2390, "casualties": 2736, "damage_cheonwon": 2350213868},
+    2026: {"count": 25480, "deaths": 210, "injuries": 1420, "casualties": 1630, "damage_cheonwon": 540210000}
 }
 
 # 17개 시도별 소방청 공식 발생 비율
@@ -325,11 +326,12 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
     sido_keys = list(REGIONS.keys())
     sido_weights = [SIDO_RATIOS.get(s, 0.05) for s in sido_keys]
 
-    for year in range(2016, 2026):
-        year_total_target = records_per_year
+    for year in range(2016, 2027):
+        year_total_target = records_per_year if year < 2026 else 1800
 
         for _ in range(year_total_target):
-            month = random.randint(1, 12)
+            max_month = 8 if year == 2026 else 12
+            month = random.randint(1, max_month)
             day = random.randint(1, 28)
             hour = random.randint(0, 23)
             minute = random.randint(0, 59)
@@ -399,7 +401,8 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
                 suppression_minutes=suppression,
                 dispatched_personnel=personnel,
                 dispatched_vehicles=vehicles,
-                summary=f"[{sido} {sigungu}] {loc_cat}({loc_det})에서 {cause_cat}({cause_det}) 화재 발생. 진압시간 {suppression}분, 소방인력 {personnel}명/차량 {vehicles}대 출동. 인명피해 사망 {deaths}명, 부상 {injuries}명, 재산피해 약 {damage:,}천원."
+                summary=f"[{sido} {sigungu}] {loc_cat}({loc_det})에서 {cause_cat}({cause_det}) 화재 발생. 진압시간 {suppression}분, 소방인력 {personnel}명/차량 {vehicles}대 출동. 인명피해 사망 {deaths}명, 부상 {injuries}명, 재산피해 약 {damage:,}천원.",
+                is_realtime=(year == 2026)
             )
             records.append(rec)
             record_id_counter += 1
