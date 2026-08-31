@@ -1,0 +1,17 @@
+{
+  "name": "소방청 화재 통계 포털",
+  "short_name": "화재통계",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#dc2626",
+  "description": "소방청 10개년 화재발생 상세정보 검색 및 통계 대시보드",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
