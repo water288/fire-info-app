@@ -1,6 +1,7 @@
 // 전역 상태 관리 객체
 const state = {
     metadata: null,
+    viewMode: localStorage.getItem('view_mode') || (window.innerWidth < 768 ? 'mobile' : 'pc'),
     filters: {
         keyword: '',
         startYear: 2016,
@@ -36,11 +37,72 @@ const state = {
 
 // DOM 로드 완료 후 초기화
 document.addEventListener('DOMContentLoaded', async () => {
+    initViewMode();
     initApiConfigUI();
     await loadMetadata();
     initFilterEventListeners();
     await refreshAllData();
 });
+
+// [모드 전환] PC 모드 vs 스마트폰 모드
+function initViewMode() {
+    setViewMode(state.viewMode, false);
+}
+
+function setViewMode(mode, refresh = true) {
+    state.viewMode = mode;
+    localStorage.setItem('view_mode', mode);
+
+    const btnMobile = document.getElementById('btnModeMobile');
+    const btnPc = document.getElementById('btnModePc');
+    const btnMobileShort = document.getElementById('btnModeMobileShort');
+    const btnPcShort = document.getElementById('btnModePcShort');
+
+    const tableView = document.getElementById('desktopTableView');
+    const cardsView = document.getElementById('mobileCardsContainer');
+
+    if (mode === 'mobile') {
+        // 모바일 모드 활성화
+        if (btnMobile) {
+            btnMobile.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-sm transition';
+        }
+        if (btnPc) {
+            btnPc.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+        }
+        if (btnMobileShort) {
+            btnMobileShort.className = 'px-2 py-1 text-[11px] rounded-md font-semibold bg-red-600 text-white transition';
+        }
+        if (btnPcShort) {
+            btnPcShort.className = 'px-2 py-1 text-[11px] rounded-md font-semibold text-slate-400 hover:text-white transition';
+        }
+
+        if (tableView) tableView.classList.add('hidden');
+        if (cardsView) cardsView.classList.remove('hidden');
+        document.body.classList.add('mobile-optimized');
+    } else {
+        // PC 모드 활성화
+        if (btnMobile) {
+            btnMobile.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+        }
+        if (btnPc) {
+            btnPc.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-sm transition';
+        }
+        if (btnMobileShort) {
+            btnMobileShort.className = 'px-2 py-1 text-[11px] rounded-md font-semibold text-slate-400 hover:text-white transition';
+        }
+        if (btnPcShort) {
+            btnPcShort.className = 'px-2 py-1 text-[11px] rounded-md font-semibold bg-red-600 text-white transition';
+        }
+
+        if (tableView) tableView.classList.remove('hidden');
+        if (cardsView) cardsView.classList.add('hidden');
+        document.body.classList.remove('mobile-optimized');
+    }
+
+    if (refresh && state.currentItems.length > 0) {
+        renderTable(state.currentItems);
+    }
+}
 
 // 1. API 및 모드 설정 초기화
 function initApiConfigUI() {
@@ -395,6 +457,88 @@ function renderTable(items) {
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    renderMobileCards(items);
+}
+
+// 8-1. 스마트폰 모드 전용 카드 목록 렌더링
+function renderMobileCards(items) {
+    const container = document.getElementById('mobileCardsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="py-8 text-center text-slate-500 text-xs">
+                <i class="fa-regular fa-folder-open text-2xl mb-1 text-slate-600 block"></i>
+                일치하는 화재 발생 기록이 없습니다.
+            </div>
+        `;
+        return;
+    }
+
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900/80 border border-slate-700/80 rounded-xl p-3.5 space-y-2.5 shadow-sm active:bg-slate-800/80 transition cursor-pointer';
+        card.onclick = () => openDetailModal(item.id);
+
+        let casualtyBadge = '';
+        if (item.deaths > 0) {
+            casualtyBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-death">사망 ${item.deaths} / 부상 ${item.injuries}</span>`;
+        } else if (item.injuries > 0) {
+            casualtyBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold badge-injury">부상 ${item.injuries}명</span>`;
+        } else {
+            casualtyBadge = `<span class="px-2 py-0.5 rounded text-[10px] badge-safe">인명피해 없음</span>`;
+        }
+
+        const damageWon = item.property_damage * 1000;
+        let formattedDamage = '';
+        if (damageWon >= 100000000) {
+            formattedDamage = `${(damageWon / 100000000).toFixed(1)}억원`;
+        } else {
+            formattedDamage = `${Math.round(damageWon / 10000).toLocaleString()}만원`;
+        }
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-1.5 font-bold text-white">
+                    <i class="fa-solid fa-calendar-day text-slate-400 text-[10px]"></i>
+                    <span>${item.fire_datetime}</span>
+                </div>
+                <span class="font-mono text-[10px] text-slate-500">${item.id}</span>
+            </div>
+
+            <div class="flex items-center justify-between text-xs border-y border-slate-800 py-1.5">
+                <div class="flex items-center space-x-1.5 text-slate-200">
+                    <i class="fa-solid fa-location-dot text-red-400 text-xs"></i>
+                    <span class="font-semibold">${item.sido} ${item.sigungu}</span>
+                    <span class="text-slate-400 text-[11px]">${item.eupmyeondong || ''}</span>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] border border-slate-700">
+                    ${item.location_category}
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-1">
+                    <span class="text-red-400 font-bold">🔥 ${item.cause_category}</span>
+                    <span class="text-slate-400 text-[11px]">(${item.cause_detail})</span>
+                </div>
+                <div>${casualtyBadge}</div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] pt-1 text-slate-400">
+                <div class="flex items-center space-x-3">
+                    <span>피해: <strong class="text-yellow-400 font-semibold">${formattedDamage}</strong></span>
+                    <span>진압: <strong class="text-slate-200">${item.suppression_minutes}분</strong></span>
+                </div>
+                <span class="text-xs text-red-400 font-semibold flex items-center gap-0.5">
+                    상세보기 <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </span>
+            </div>
+        `;
+        container.appendChild(card);
     });
 }
 
