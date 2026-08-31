@@ -141,7 +141,7 @@ from app.services.mock_data import get_fire_dataset, REGIONS, FIRE_CAUSES, LOCAT
 def get_metadata():
     """검색 필터에 필요한 지역, 원인, 장소 메타데이터 반환"""
     return {
-        "years": list(range(2016, 2027)),
+        "years": list(range(2007, 2027)),
         "regions": REGIONS,
         "causes": list(FIRE_CAUSES.keys()),
         "causes_detail": FIRE_CAUSES,
@@ -161,7 +161,7 @@ def get_metadata():
 @app.get("/api/fire-data", response_model=SearchResponse)
 async def search_fire_data(
     keyword: Optional[str] = None,
-    start_year: Optional[int] = 2016,
+    start_year: Optional[int] = 2007,
     end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -205,7 +205,7 @@ async def search_fire_data(
 
     # 실제 통계 산출
     real_stat = calculate_real_fire_stats(
-        start_year=start_year or 2016,
+        start_year=start_year or 2007,
         end_year=end_year or 2026,
         sido=sido,
         sigungu=sigungu,
@@ -242,7 +242,7 @@ async def search_fire_data(
 @app.get("/api/stats", response_model=StatsSummary)
 def get_fire_stats(
     keyword: Optional[str] = None,
-    start_year: Optional[int] = 2016,
+    start_year: Optional[int] = 2007,
     end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -255,7 +255,7 @@ def get_fire_stats(
     has_deaths: Optional[bool] = None
 ):
     """현재 필터링 조건에 따른 대한민국 소방청 100% 실제 통계 요약 및 차트 데이터 산출"""
-    s_yr = start_year or 2016
+    s_yr = start_year or 2007
     e_yr = end_year or 2026
 
     # 100% 실제 소방 통계 연감 기반 계산
@@ -358,8 +358,8 @@ def get_fire_stats(
 @app.get("/api/export-csv")
 def export_fire_data_csv(
     keyword: Optional[str] = None,
-    start_year: Optional[int] = 2016,
-    end_year: Optional[int] = 2025,
+    start_year: Optional[int] = 2007,
+    end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sido: Optional[str] = None,
@@ -394,8 +394,8 @@ def export_fire_data_csv(
 
     # 실제 통계 건수 계산
     real_stat = calculate_real_fire_stats(
-        start_year=start_year or 2016,
-        end_year=end_year or 2025,
+        start_year=start_year or 2007,
+        end_year=end_year or 2026,
         sido=sido,
         sigungu=sigungu,
         cause_category=cause_category,

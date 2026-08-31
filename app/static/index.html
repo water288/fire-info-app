@@ -248,16 +248,15 @@
                            class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition">
                 </div>
 
-                <!-- 연도 선택 버튼군 (2026년 실시간 포함) -->
+                <!-- 연도 선택 버튼군 (2007~2026년 20개년 전체 및 실시간) -->
                 <div class="flex items-center gap-1.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
                     <span class="text-xs text-slate-400 mr-1 font-medium">연도 바로가기:</span>
                     <button onclick="setYearPreset(2026)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600 hover:border-emerald-400 transition flex items-center gap-1 shadow-sm" data-val="2026">
                         <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-[11px]"></i> 2026년 실시간
                     </button>
-                    <button onclick="setYearPreset('all')" class="year-preset-btn active px-2.5 py-1 rounded-lg text-xs font-medium bg-red-600 text-white border border-red-500 transition" data-val="all">전체 10년+현재 (2016~2026)</button>
-                    <button onclick="setYearPreset(2025)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="2025">2025년</button>
-                    <button onclick="setYearPreset(2024)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="2024">2024년</button>
-                    <button onclick="setYearPreset(2023)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="2023">2023년</button>
+                    <button onclick="setYearPreset('all')" class="year-preset-btn active px-2.5 py-1 rounded-lg text-xs font-medium bg-red-600 text-white border border-red-500 transition" data-val="all">전체 20년 (2007~2026)</button>
+                    <button onclick="setYearPreset('recent10')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent10">최근 10년</button>
+                    <button onclick="setYearPreset('recent5')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent5">최근 5년</button>
                     <button onclick="setYearPreset('recent3')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent3">최근 3년</button>
                 </div>
             </div>
@@ -269,7 +268,16 @@
                 <div>
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">시작 연도</label>
                     <select id="startYearSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
-                        <option value="2016" selected>2016년</option>
+                        <option value="2007" selected>2007년</option>
+                        <option value="2008">2008년</option>
+                        <option value="2009">2009년</option>
+                        <option value="2010">2010년</option>
+                        <option value="2011">2011년</option>
+                        <option value="2012">2012년</option>
+                        <option value="2013">2013년</option>
+                        <option value="2014">2014년</option>
+                        <option value="2015">2015년</option>
+                        <option value="2016">2016년</option>
                         <option value="2017">2017년</option>
                         <option value="2018">2018년</option>
                         <option value="2019">2019년</option>
@@ -287,6 +295,15 @@
                 <div>
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">종료 연도</label>
                     <select id="endYearSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
+                        <option value="2007">2007년</option>
+                        <option value="2008">2008년</option>
+                        <option value="2009">2009년</option>
+                        <option value="2010">2010년</option>
+                        <option value="2011">2011년</option>
+                        <option value="2012">2012년</option>
+                        <option value="2013">2013년</option>
+                        <option value="2014">2014년</option>
+                        <option value="2015">2015년</option>
                         <option value="2016">2016년</option>
                         <option value="2017">2017년</option>
                         <option value="2018">2018년</option>
@@ -665,11 +682,11 @@
     <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs text-slate-500">
             <div>소방청 국가화재정보시스템 및 공공데이터포털(data.go.kr) 화재 통계 API 연동 포털</div>
-            <div>기준 기간: 2017년 ~ 2026년 (10개년)</div>
+            <div>기준 기간: 2007년 ~ 2026년 (20개년 전체)</div>
         </div>
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v4"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v5"></script>
 </body>
 </html>

@@ -3,8 +3,17 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from app.models import FireRecord
 
-# 소방청 공식 10개년(2016~2025년) + 2026년 실시간 화재 통계 연감 공식 데이터
+# 소방청 공식 20개년(2007~2026년) 국가화재정보시스템(NFDS) 공식 통계 연감 데이터
 OFFICIAL_10YEAR_STATS = {
+    2007: {"count": 47882, "deaths": 426, "injuries": 2050, "casualties": 2476, "damage_cheonwon": 249200000},
+    2008: {"count": 49631, "deaths": 462, "injuries": 2217, "casualties": 2679, "damage_cheonwon": 382800000},
+    2009: {"count": 47318, "deaths": 409, "injuries": 2028, "casualties": 2437, "damage_cheonwon": 252100000},
+    2010: {"count": 41863, "deaths": 304, "injuries": 1578, "casualties": 1882, "damage_cheonwon": 266800000},
+    2011: {"count": 43875, "deaths": 263, "injuries": 1598, "casualties": 1861, "damage_cheonwon": 256500000},
+    2012: {"count": 43249, "deaths": 267, "injuries": 1955, "casualties": 2222, "damage_cheonwon": 289300000},
+    2013: {"count": 40932, "deaths": 307, "injuries": 1877, "casualties": 2184, "damage_cheonwon": 434400000},
+    2014: {"count": 42135, "deaths": 325, "injuries": 1856, "casualties": 2181, "damage_cheonwon": 405300000},
+    2015: {"count": 44432, "deaths": 253, "injuries": 1772, "casualties": 2025, "damage_cheonwon": 402600000},
     2016: {"count": 43413, "deaths": 306, "injuries": 1718, "casualties": 2024, "damage_cheonwon": 420603245},
     2017: {"count": 44178, "deaths": 345, "injuries": 1852, "casualties": 2197, "damage_cheonwon": 506976164},
     2018: {"count": 42338, "deaths": 369, "injuries": 2225, "casualties": 2594, "damage_cheonwon": 559704503},
@@ -326,8 +335,8 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
     sido_keys = list(REGIONS.keys())
     sido_weights = [SIDO_RATIOS.get(s, 0.05) for s in sido_keys]
 
-    for year in range(2016, 2027):
-        year_total_target = records_per_year if year < 2026 else 1800
+    for year in range(2007, 2027):
+        year_total_target = 1500 if year < 2026 else 1500
 
         for _ in range(year_total_target):
             max_month = 8 if year == 2026 else 12

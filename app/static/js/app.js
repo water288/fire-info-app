@@ -166,7 +166,7 @@ async function loadMetadata() {
             const label = (y === 2026) ? `${y}년 (현재)` : `${y}년`;
             const opt1 = new Option(label, y);
             const opt2 = new Option(label, y);
-            if (y === 2016) opt1.selected = true;
+            if (y === 2007) opt1.selected = true;
             if (y === 2026) opt2.selected = true;
             startYearSel.add(opt1);
             endYearSel.add(opt2);
@@ -247,13 +247,16 @@ function setYearPreset(preset) {
     ensureYearOption(endSel, 2026);
 
     if (preset === 'all') {
-        startSel.value = "2016";
+        startSel.value = "2007";
         endSel.value = "2026";
-    } else if (preset === 'recent3') {
-        startSel.value = "2024";
+    } else if (preset === 'recent10') {
+        startSel.value = "2017";
         endSel.value = "2026";
     } else if (preset === 'recent5') {
         startSel.value = "2022";
+        endSel.value = "2026";
+    } else if (preset === 'recent3') {
+        startSel.value = "2024";
         endSel.value = "2026";
     } else {
         startSel.value = String(preset);
