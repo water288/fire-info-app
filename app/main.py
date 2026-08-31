@@ -202,7 +202,8 @@ async def search_fire_data(
         sido=sido,
         sigungu=sigungu,
         cause_category=cause_category,
-        location_category=location_category
+        location_category=location_category,
+        keyword=keyword
     )
     
     total_count = real_stat["total_fires"]
@@ -256,7 +257,8 @@ def get_fire_stats(
         sido=sido,
         sigungu=sigungu,
         cause_category=cause_category,
-        location_category=location_category
+        location_category=location_category,
+        keyword=keyword
     )
 
     total_fires = real_stat["total_fires"]
@@ -348,8 +350,8 @@ def get_fire_stats(
 @app.get("/api/export-csv")
 def export_fire_data_csv(
     keyword: Optional[str] = None,
-    start_year: Optional[int] = 2017,
-    end_year: Optional[int] = 2026,
+    start_year: Optional[int] = 2016,
+    end_year: Optional[int] = 2025,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sido: Optional[str] = None,
@@ -389,7 +391,8 @@ def export_fire_data_csv(
         sido=sido,
         sigungu=sigungu,
         cause_category=cause_category,
-        location_category=location_category
+        location_category=location_category,
+        keyword=keyword
     )
     target_count = real_stat["total_fires"]
 

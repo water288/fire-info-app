@@ -149,9 +149,48 @@ def calculate_real_fire_stats(
     sido: Optional[str] = None,
     sigungu: Optional[str] = None,
     cause_category: Optional[str] = None,
-    location_category: Optional[str] = None
+    location_category: Optional[str] = None,
+    keyword: Optional[str] = None
 ) -> Dict:
-    """소방청 공식 10개년 통계 기반 시도/시군구/발화원인/발생장소별 100% 실제 통계 수치 및 점유율 정밀 산출"""
+    """소방청 공식 10개년 통계 기반 시도/시군구/발화원인/발생장소/키워드별 100% 실제 통계 수치 및 점유율 정밀 산출"""
+    # 키워드가 전달되었을 때 지역명, 원인명 자동 감지
+    kw = (keyword or "").strip()
+    if kw:
+        # 시군구명 자동 감지 (예: '청주시', '청주', '충주시', '강남구' 등)
+        if not sigungu:
+            for s_name, sgg_list in REGIONS.items():
+                for sgg in sgg_list:
+                    base_sgg = sgg.replace("시", "").replace("군", "").replace("구", "")
+                    if sgg in kw or (len(base_sgg) >= 2 and base_sgg in kw):
+                        sigungu = sgg
+                        if not sido:
+                            sido = s_name
+                        break
+                if sigungu:
+                    break
+        
+        # 시도명 자동 감지 (예: '충북', '충청북도', '서울', '경기' 등)
+        if not sido:
+            for s_name in REGIONS.keys():
+                short_name = s_name[:2]
+                if s_name in kw or short_name in kw:
+                    sido = s_name
+                    break
+
+        # 발화원인 자동 감지
+        if not cause_category:
+            for c_name in CAUSE_RATIOS.keys():
+                if c_name in kw or (len(c_name) >= 2 and c_name[:2] in kw):
+                    cause_category = c_name
+                    break
+
+        # 발생장소 자동 감지
+        if not location_category:
+            for l_name in LOCATION_RATIOS.keys():
+                if l_name in kw or (len(l_name) >= 2 and l_name[:2] in kw):
+                    location_category = l_name
+                    break
+
     selected_years = [y for y in range(start_year, end_year + 1) if y in OFFICIAL_10YEAR_STATS]
     
     # 1. 전국 연도별 합산
