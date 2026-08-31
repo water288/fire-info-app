@@ -267,7 +267,16 @@
                 <div>
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">시작 연도</label>
                     <select id="startYearSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
-                        <!-- JS에서 동적 채움 -->
+                        <option value="2016" selected>2016년</option>
+                        <option value="2017">2017년</option>
+                        <option value="2018">2018년</option>
+                        <option value="2019">2019년</option>
+                        <option value="2020">2020년</option>
+                        <option value="2021">2021년</option>
+                        <option value="2022">2022년</option>
+                        <option value="2023">2023년</option>
+                        <option value="2024">2024년</option>
+                        <option value="2025">2025년</option>
                     </select>
                 </div>
 
@@ -275,7 +284,16 @@
                 <div>
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">종료 연도</label>
                     <select id="endYearSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
-                        <!-- JS에서 동적 채움 -->
+                        <option value="2016">2016년</option>
+                        <option value="2017">2017년</option>
+                        <option value="2018">2018년</option>
+                        <option value="2019">2019년</option>
+                        <option value="2020">2020년</option>
+                        <option value="2021">2021년</option>
+                        <option value="2022">2022년</option>
+                        <option value="2023">2023년</option>
+                        <option value="2024">2024년</option>
+                        <option value="2025" selected>2025년</option>
                     </select>
                 </div>
 
@@ -284,6 +302,23 @@
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">시·도 (지역)</label>
                     <select id="sidoSelect" onchange="onSidoChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
                         <option value="">전체 시·도</option>
+                        <option value="서울특별시">서울특별시</option>
+                        <option value="부산광역시">부산광역시</option>
+                        <option value="대구광역시">대구광역시</option>
+                        <option value="인천광역시">인천광역시</option>
+                        <option value="광주광역시">광주광역시</option>
+                        <option value="대전광역시">대전광역시</option>
+                        <option value="울산광역시">울산광역시</option>
+                        <option value="세종특별자치시">세종특별자치시</option>
+                        <option value="경기도">경기도</option>
+                        <option value="강원특별자치도">강원특별자치도</option>
+                        <option value="충청북도">충청북도</option>
+                        <option value="충청남도">충청남도</option>
+                        <option value="전북특별자치도">전북특별자치도</option>
+                        <option value="전라남도">전라남도</option>
+                        <option value="경상북도">경상북도</option>
+                        <option value="경상남도">경상남도</option>
+                        <option value="제주특별자치도">제주특별자치도</option>
                     </select>
                 </div>
 
@@ -300,6 +335,15 @@
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">발화 원인</label>
                     <select id="causeSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
                         <option value="">전체 원인</option>
+                        <option value="부주의">부주의</option>
+                        <option value="전기적 요인">전기적 요인</option>
+                        <option value="기계적 요인">기계적 요인</option>
+                        <option value="화학적 요인">화학적 요인</option>
+                        <option value="가스누출">가스누출</option>
+                        <option value="교통사고">교통사고</option>
+                        <option value="방화/방화의심">방화/방화의심</option>
+                        <option value="자연적 요인">자연적 요인</option>
+                        <option value="기타/미상">기타/미상</option>
                     </select>
                 </div>
 
@@ -308,6 +352,13 @@
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">발생 장소</label>
                     <select id="locationSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
                         <option value="">전체 장소</option>
+                        <option value="주거시설">주거시설</option>
+                        <option value="산업시설">산업시설</option>
+                        <option value="상업/업무시설">상업/업무시설</option>
+                        <option value="자동차/운송수단">자동차/운송수단</option>
+                        <option value="야외/임야">야외/임야</option>
+                        <option value="교육/의료/복지">교육/의료/복지</option>
+                        <option value="위험물/저장시설">위험물/저장시설</option>
                     </select>
                 </div>
             </div>

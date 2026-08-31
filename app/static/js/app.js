@@ -37,11 +37,35 @@ const state = {
 
 // DOM 로드 완료 후 초기화
 document.addEventListener('DOMContentLoaded', async () => {
-    initViewMode();
-    initApiConfigUI();
-    await loadMetadata();
-    initFilterEventListeners();
-    await refreshAllData();
+    try {
+        initViewMode();
+    } catch (e) {
+        console.error('initViewMode error:', e);
+    }
+
+    try {
+        initApiConfigUI();
+    } catch (e) {
+        console.error('initApiConfigUI error:', e);
+    }
+
+    try {
+        initFilterEventListeners();
+    } catch (e) {
+        console.error('initFilterEventListeners error:', e);
+    }
+
+    try {
+        await loadMetadata();
+    } catch (e) {
+        console.error('loadMetadata error:', e);
+    }
+
+    try {
+        await refreshAllData();
+    } catch (e) {
+        console.error('refreshAllData error:', e);
+    }
 });
 
 // [모드 전환] PC 모드 vs 스마트폰 모드
