@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Query, HTTPException, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
 import io
+import os
 import csv
 from datetime import datetime
 
@@ -470,6 +472,20 @@ def export_fire_data_csv(
         content=csv_data,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/api/download-excel")
+def download_complete_excel():
+    """2007~2026년 20개년 전체 826,683건 화재 상세 엑셀(.xlsx) 파일 다운로드"""
+    excel_path = "korea_fire_data_2007_2026_826683.xlsx"
+    if not os.path.exists(excel_path):
+        raise HTTPException(status_code=404, detail="엑셀 파일이 준비되지 않았습니다.")
+    
+    return FileResponse(
+        path=excel_path,
+        filename="대한민국_소방청_화재발생상세_2007-2026_826683건.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 

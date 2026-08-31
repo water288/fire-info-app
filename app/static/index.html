@@ -87,8 +87,12 @@
                         <i class="fa-solid fa-key text-amber-400"></i>
                         <span class="hidden xs:inline">API</span><span>설정</span>
                     </button>
-                    <button onclick="exportCSV()" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/20 transition">
+                    <a href="/api/download-excel" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-700/20 transition" title="2007~2026년 전체 826,683건 엑셀(.xlsx) 파일 다운로드">
                         <i class="fa-solid fa-file-excel"></i>
+                        <span>전체 엑셀(82.6만건)</span>
+                    </a>
+                    <button onclick="exportCSV()" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/20 transition">
+                        <i class="fa-solid fa-file-csv"></i>
                         <span>CSV 다운</span>
                     </button>
                 </div>
