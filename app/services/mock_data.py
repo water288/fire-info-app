@@ -387,8 +387,16 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
         is_cur = (year == cur_year)
         # 연도별 전국 시군구 전수 분배
         for pair_idx, (sido, sigungu, s_idx, g_idx) in enumerate(all_sgg_pairs):
-            # 시군구별 연간 기본 8~15건의 사건을 결정론적으로 생성
-            items_for_sgg = 12 if is_cur else 10
+            # 시도 및 시군구 통계 가중치 반영
+            s_weight = SIDO_RATIOS.get(sido, 0.05)
+            if sido in SIGUNGU_WEIGHTS_CUSTOM:
+                g_weight = SIGUNGU_WEIGHTS_CUSTOM[sido].get(sigungu, 1.0 / len(REGIONS[sido]))
+            else:
+                g_weight = 1.0 / len(REGIONS[sido])
+
+            # 충주시(비중 15%) 등 주요 시군구는 실제 통계에 비례하여 25~60건 생성
+            base_count = max(8, int(g_weight * 200))
+            items_for_sgg = int(base_count * 1.2) if is_cur else base_count
             
             # 해당 시군구의 읍면동 목록
             if sigungu in SPECIFIC_EUPMYEONDONG:
