@@ -335,29 +335,50 @@ def generate_official_10year_records(records_per_year: int = 2500) -> List[FireR
     sido_keys = list(REGIONS.keys())
     sido_weights = [SIDO_RATIOS.get(s, 0.05) for s in sido_keys]
 
-    for year in range(2007, 2027):
-        year_total_target = 1500 if year < 2026 else 1500
+    now = datetime.now()
+    cur_year = now.year
+    cur_month = now.month
+    cur_day = now.day
+    cur_hour = now.hour
+    cur_minute = now.minute
 
-        for _ in range(year_total_target):
-            max_month = 8 if year == 2026 else 12
-            month = random.randint(1, max_month)
-            
-            # 각 월별 실제 일수 계산 (8월은 31일까지)
-            if month in [1, 3, 5, 7, 8, 10, 12]:
-                max_d = 31
-            elif month == 2:
-                max_d = 29 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 28
-            else:
-                max_d = 30
+    for year in range(2007, cur_year + 1):
+        year_total_target = 1500 if year < cur_year else 1800
+        is_current_year = (year == cur_year)
 
-            day = random.randint(1, max_d)
-            
-            # 2026년 8월 31일 오늘은 현재 시간(23시) 이전까지의 시각으로 생성
-            if year == 2026 and month == 8 and day == 31:
-                hour = random.randint(0, 22)
+        for item_idx in range(year_total_target):
+            if is_current_year:
+                # 2026년 현재 연도: 1월부터 오늘(현재 월)까지 동적 분배
+                month = random.randint(1, cur_month)
+                if month == cur_month:
+                    day = random.randint(1, cur_day)
+                else:
+                    if month in [1, 3, 5, 7, 8, 10, 12]:
+                        max_d = 31
+                    elif month == 2:
+                        max_d = 29 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 28
+                    else:
+                        max_d = 30
+                    day = random.randint(1, max_d)
+
+                # 오늘 당일인 경우 현재 시각(0~cur_hour) 이전으로 생성
+                if month == cur_month and day == cur_day:
+                    hour = random.randint(0, max(0, cur_hour - 1)) if cur_hour > 0 else 0
+                    minute = random.randint(0, 59)
+                else:
+                    hour = random.randint(0, 23)
+                    minute = random.randint(0, 59)
             else:
+                month = random.randint(1, 12)
+                if month in [1, 3, 5, 7, 8, 10, 12]:
+                    max_d = 31
+                elif month == 2:
+                    max_d = 29 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 28
+                else:
+                    max_d = 30
+                day = random.randint(1, max_d)
                 hour = random.randint(0, 23)
-            minute = random.randint(0, 59)
+                minute = random.randint(0, 59)
 
             date_obj = datetime(year, month, day, hour, minute)
             fire_date = date_obj.strftime("%Y-%m-%d")
