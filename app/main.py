@@ -29,8 +29,8 @@ def get_current_active_records() -> List[FireRecord]:
     return base_records
 
 app = FastAPI(
-    title="소방청 화재발생 데이터 10개년 통합 검색 & 분석 포털",
-    description="최근 10년간(2017~2026)의 소방청 화재발생 상세정보를 실시간 검색, 다차원 정렬, 통계 시각화할 수 있는 API 서비스",
+    title="소방청 화재발생 데이터 2007~2026년 통합 검색 & 분석 포털",
+    description="2007년부터 2026년까지의 소방청 화재발생 상세정보를 실시간 검색, 다차원 정렬, 통계 시각화할 수 있는 API 서비스",
     version="1.0.0"
 )
 
@@ -197,7 +197,7 @@ async def search_fire_data(
     api_key: Optional[str] = None,
     mode: str = "demo"  # 'demo' or 'live'
 ):
-    """10개년(2016~2025) 화재 발생 데이터 상세 검색 및 정렬 (지역/원인/장소 완벽 필터링)"""
+    """2007~2026년 화재 발생 데이터 상세 검색 및 정렬 (지역/원인/장소 완벽 필터링)"""
     
     # 1. 소스 데이터 로드 (소방청 공식 API 동기화 데이터 또는 20개년 데이터셋 단일 소스)
     source_data = get_current_active_records()
@@ -571,8 +571,7 @@ def export_fire_data_csv(
             r.summary
         ])
 
-    csv_data = output.getvalue()
-    filename = f"fire_data_10years_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"korea_fire_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
     return Response(
         content=csv_data,

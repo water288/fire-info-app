@@ -145,7 +145,7 @@ function updateModeBadge() {
         text.innerText = '공공데이터포털 실시간 API 모드';
     } else {
         badge.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/70 text-emerald-400 border border-emerald-800/50';
-        text.innerText = '10개년 통합 데이터셋 모드 (2017~2026)';
+        text.innerText = '소방청 20개년(2007~2026) 통합 데이터셋 모드';
     }
 }
 
