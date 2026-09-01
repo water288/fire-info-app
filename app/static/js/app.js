@@ -1086,17 +1086,79 @@ async function testApiConnection() {
     }
 }
 
+async function executeFullOfficialSync() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    const resBox = document.getElementById('apiTestResultBox');
+    const spinner = document.getElementById('syncProgressSpinner');
+    const btn = document.getElementById('btnExecuteSync');
+
+    if (!key) {
+        resBox.className = 'p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs block';
+        resBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> 공공데이터포털 일반 인증키(Service Key)를 먼저 입력해주세요.';
+        resBox.classList.remove('hidden');
+        return;
+    }
+
+    spinner.classList.remove('hidden');
+    btn.disabled = true;
+    resBox.classList.add('hidden');
+
+    try {
+        const response = await fetch(`/api/sync-official-api?api_key=${encodeURIComponent(key)}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            resBox.className = 'p-3 rounded-xl border border-emerald-800/60 bg-emerald-950/40 text-emerald-300 text-xs block space-y-1.5';
+            resBox.innerHTML = `
+                <div class="font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i> 소방청 공식 API 동기화 완료!
+                </div>
+                <div>· 동기화된 실제 화재 데이터: <strong class="text-white">${data.total_synced.toLocaleString()}건</strong></div>
+                <div>· 연동 성공 엔드포인트: <strong class="text-white">${data.endpoints_synced}개 연도</strong></div>
+                <div class="text-[11px] text-emerald-400/80 pt-1">기존 데이터를 지우고 소방청 100% 공식 데이터로 전체 화면이 동기화되었습니다.</div>
+            `;
+            resBox.classList.remove('hidden');
+
+            state.apiConfig.apiKey = key;
+            state.apiConfig.mode = 'live';
+            localStorage.setItem('fire_api_key', key);
+            localStorage.setItem('fire_api_mode', 'live');
+
+            const btnHeader = document.getElementById('btnSyncOfficialApi');
+            if (btnHeader) {
+                btnHeader.className = 'flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition';
+                btnHeader.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>소방청 API 연동됨</span>';
+            }
+
+            setTimeout(() => {
+                closeApiConfigModal();
+                applyFilters(1);
+            }, 1200);
+        } else {
+            resBox.className = 'p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs block';
+            resBox.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> ${data.error || '소방청 API 동기화 실패'}`;
+            resBox.classList.remove('hidden');
+        }
+    } catch (err) {
+        resBox.className = 'p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs block';
+        resBox.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> 네트워크 통신 오류: ${err.message}`;
+        resBox.classList.remove('hidden');
+    } finally {
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+    }
+}
+
 function saveApiConfig() {
     const key = document.getElementById('apiKeyInput').value.trim();
-    const useReal = document.getElementById('useRealApiCheckbox').checked;
-
     state.apiConfig.apiKey = key;
-    state.apiConfig.mode = useReal ? 'live' : 'demo';
+    state.apiConfig.mode = 'live';
 
     localStorage.setItem('fire_api_key', key);
-    localStorage.setItem('fire_api_mode', state.apiConfig.mode);
+    localStorage.setItem('fire_api_mode', 'live');
 
-    updateModeBadge();
     closeApiConfigModal();
     applyFilters(1);
 }

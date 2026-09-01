@@ -10,7 +10,19 @@ from datetime import datetime
 
 from app.models import FireRecord, SearchResponse, StatsSummary
 from app.services.mock_data import get_fire_dataset, REGIONS, FIRE_CAUSES, LOCATIONS, OFFICIAL_10YEAR_STATS, calculate_real_fire_stats
-from app.services.fire_api import fetch_real_fire_data, test_odcloud_connection, ODCLOUD_FIRE_ENDPOINTS
+from app.services.fire_api import (
+    test_odcloud_connection,
+    sync_all_odcloud_data,
+    get_synced_fire_records,
+    is_synced_with_official_api,
+    ODCLOUD_FIRE_ENDPOINTS
+)
+
+def get_current_active_records() -> List[FireRecord]:
+    """소방청 공식 API가 동기화된 경우 100% 소방청 공식 실시간 데이터만 반환"""
+    if is_synced_with_official_api():
+        return get_synced_fire_records()
+    return get_fire_dataset()
 
 app = FastAPI(
     title="소방청 화재발생 데이터 10개년 통합 검색 & 분석 포털",
@@ -183,8 +195,8 @@ async def search_fire_data(
 ):
     """10개년(2016~2025) 화재 발생 데이터 상세 검색 및 정렬 (지역/원인/장소 완벽 필터링)"""
     
-    # 1. 소스 데이터 로드 (10개년 공식 데이터셋 단일 소스로 통계와 목록 건수를 100% 일치)
-    source_data = get_fire_dataset()
+    # 1. 소스 데이터 로드 (소방청 공식 API 동기화 데이터 또는 20개년 데이터셋 단일 소스)
+    source_data = get_current_active_records()
 
     # 2. 지정된 조건(시도, 시군구, 원인, 장소 등)으로 정확한 필터링 및 정렬 수행
     filtered = filter_and_sort_records(
@@ -279,7 +291,7 @@ def get_fire_stats(
     yearly_trend = real_stat["yearly_trend"]
 
     # 세부 원인/장소 비중은 샘플 비율을 활용해 실제 통계 건수에 가중 반영
-    all_data = get_fire_dataset()
+    all_data = get_current_active_records()
     filtered = filter_and_sort_records(
         records=all_data,
         keyword=keyword,
@@ -297,7 +309,7 @@ def get_fire_stats(
     )
 
     # 원인/지역/장소 비중 계산
-    all_data = get_fire_dataset()
+    all_data = get_current_active_records()
     filtered_for_dist = filter_and_sort_records(
         records=all_data,
         keyword=keyword,
@@ -375,7 +387,7 @@ def export_fire_data_csv(
     sort_order: str = "desc"
 ):
     """현재 검색/정렬 조건의 데이터를 UTF-8 with BOM CSV로 다운로드"""
-    all_data = get_fire_dataset()
+    all_data = get_current_active_records()
     filtered = filter_and_sort_records(
         records=all_data,
         keyword=keyword,
@@ -474,6 +486,22 @@ def export_fire_data_csv(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+@app.post("/api/sync-official-api")
+async def sync_official_api(api_key: str = Query(..., description="공공데이터포털 소방청 일반 인증키")):
+    """기존 데이터를 지우고 공공데이터포털(data.go.kr) 소방청 공식 화재 발생 API와 완벽하게 동기화"""
+    result = await sync_all_odcloud_data(api_key=api_key)
+    return result
+
+@app.get("/api/sync-status")
+def get_sync_status():
+    """소방청 공식 API 연동 상태 및 건수 조회"""
+    return {
+        "is_synced": is_synced_with_official_api(),
+        "synced_count": len(get_synced_fire_records()),
+        "endpoints": ODCLOUD_FIRE_ENDPOINTS,
+        "mode": "OFFICIAL_DATA_GO_KR_API" if is_synced_with_official_api() else "NFDS_HISTORICAL_PORTAL"
+    }
 
 @app.get("/api/download-excel")
 def download_complete_excel():

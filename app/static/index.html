@@ -83,9 +83,9 @@
                 </div>
 
                 <div class="flex items-center space-x-1.5 sm:space-x-2">
-                    <button onclick="openApiConfigModal()" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-                        <i class="fa-solid fa-key text-amber-400"></i>
-                        <span class="hidden xs:inline">API</span><span>설정</span>
+                    <button onclick="openApiConfigModal()" id="btnSyncOfficialApi" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-md shadow-amber-600/20 transition animate-pulse">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>소방청 API 동기화</span>
                     </button>
                     <a href="/api/download-excel" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-700/20 transition" title="2007~2026년 전체 826,683건 엑셀(.xlsx) 파일 다운로드">
                         <i class="fa-solid fa-file-excel"></i>
@@ -665,18 +665,23 @@
                 <!-- 테스트 결과 표시창 -->
                 <div id="apiTestResultBox" class="hidden p-3 rounded-xl border text-xs"></div>
 
-                <div class="flex items-center space-x-2 pt-1 border-t border-slate-800">
-                    <input type="checkbox" id="useRealApiCheckbox" class="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-amber-500 w-4 h-4">
-                    <label for="useRealApiCheckbox" class="text-slate-200 cursor-pointer">공공데이터 실시간 API 모드 활성화</label>
+                <div class="pt-2 border-t border-slate-800 space-y-2">
+                    <button type="button" onclick="executeFullOfficialSync()" id="btnExecuteSync" class="w-full py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30 transition">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>소방청 API 전체 데이터 실시간 동기화 실행</span>
+                    </button>
+                    <div id="syncProgressSpinner" class="hidden text-center text-amber-400 text-xs py-1">
+                        <i class="fa-solid fa-spinner animate-spin"></i> 소방청 공공데이터포털로부터 실제 데이터를 수집·동기화하는 중입니다...
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end gap-2">
+            <div class="mt-4 flex justify-end gap-2">
                 <button onclick="closeApiConfigModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">
-                    취소
+                    닫기
                 </button>
-                <button onclick="saveApiConfig()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold transition">
-                    저장 및 적용
+                <button onclick="saveApiConfig()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition">
+                    키 저장
                 </button>
             </div>
         </div>
@@ -691,6 +696,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v9"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v10"></script>
 </body>
 </html>

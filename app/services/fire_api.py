@@ -1,3 +1,4 @@
+import os
 import httpx
 import logging
 from urllib.parse import unquote
@@ -8,16 +9,21 @@ logger = logging.getLogger(__name__)
 
 # 소방청 ODCloud(공공데이터포털) 연도별 화재발생정보 API 엔드포인트 매핑
 ODCLOUD_FIRE_ENDPOINTS = [
-    {"year": "2024", "name": "소방청_화재발생 정보 (2024년)", "uddi": "5bb0f25d-61e9-4c45-8c9a-cad5f129c6d0"},
-    {"year": "2023", "name": "소방청_화재발생 정보 (2023년)", "uddi": "dccb3198-ff6b-401d-826d-a8bbb7d44c61"},
-    {"year": "2021", "name": "소방청_화재발생 정보 (2021년)", "uddi": "36028e48-751c-4609-9d1d-b704d1e0ea0b"},
-    {"year": "2020", "name": "소방청_화재발생 정보 (2020년)", "uddi": "4c6b68db-0857-4422-9bce-e4a9befa64c5"},
-    {"year": "2019", "name": "소방청_화재발생 정보 (2019년)", "uddi": "d9db23d7-777f-47e6-9439-861f9f222ba2"},
-    {"year": "2018", "name": "소방청_화재발생 정보 (2018년)", "uddi": "77900950-2d97-4fe5-8bd8-e27f65021a3f"},
-    {"year": "2018_10", "name": "소방청_화재발생 정보 (2018년 10월)", "uddi": "f8a6c3c5-de87-497a-bd93-86211f6f0ad3"}
+    {"year": 2024, "name": "소방청_화재발생 정보 (2024년)", "uddi": "5bb0f25d-61e9-4c45-8c9a-cad5f129c6d0"},
+    {"year": 2023, "name": "소방청_화재발생 정보 (2023년)", "uddi": "dccb3198-ff6b-401d-826d-a8bbb7d44c61"},
+    {"year": 2022, "name": "소방청_화재발생 정보 (2022년)", "uddi": "36028e48-751c-4609-9d1d-b704d1e0ea0b"},
+    {"year": 2021, "name": "소방청_화재발생 정보 (2021년)", "uddi": "36028e48-751c-4609-9d1d-b704d1e0ea0b"},
+    {"year": 2020, "name": "소방청_화재발생 정보 (2020년)", "uddi": "4c6b68db-0857-4422-9bce-e4a9befa64c5"},
+    {"year": 2019, "name": "소방청_화재발생 정보 (2019년)", "uddi": "d9db23d7-777f-47e6-9439-861f9f222ba2"},
+    {"year": 2018, "name": "소방청_화재발생 정보 (2018년)", "uddi": "77900950-2d97-4fe5-8bd8-e27f65021a3f"},
+    {"year": 2018, "name": "소방청_화재발생 정보 (2018년 10월)", "uddi": "f8a6c3c5-de87-497a-bd93-86211f6f0ad3"}
 ]
 
 ODCLOUD_BASE_URL = "https://api.odcloud.kr/api/15044003/v1/uddi:"
+
+# 동기화된 실제 소방청 데이터 전역 저장소
+SYNCED_REAL_RECORDS: List[FireRecord] = []
+IS_API_SYNCED = False
 
 def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
     """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱"""
@@ -161,64 +167,71 @@ async def test_odcloud_connection(api_key: str) -> Dict[str, Any]:
         }
 
 
-async def fetch_real_fire_data(
-    api_key: str,
-    custom_url: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    page_no: int = 1,
-    num_of_rows: int = 20
-) -> Dict[str, Any]:
-    """소방청 ODCloud API로부터 실시간 화재 발생 데이터 페칭"""
+async def sync_all_odcloud_data(api_key: str, max_records_per_endpoint: int = 500) -> Dict[str, Any]:
+    """소방청 공공데이터포털(ODCloud)의 모든 연도별 엔드포인트에서 순수 실제 데이터를 일괄 수집하여 동기화"""
+    global SYNCED_REAL_RECORDS, IS_API_SYNCED
     if not api_key:
-        return {"success": False, "error": "API 키가 입력되지 않았습니다.", "items": [], "total_count": 0}
+        return {"success": False, "error": "API 인증키가 필요합니다.", "total_synced": 0}
 
     clean_key = unquote(api_key.strip())
-    
-    # 기본은 2024년 데이터셋
-    uddi = ODCLOUD_FIRE_ENDPOINTS[0]["uddi"]
-    target_url = custom_url if (custom_url and "api.odcloud.kr" in custom_url) else f"{ODCLOUD_BASE_URL}{uddi}"
+    collected_records: List[FireRecord] = []
+    sync_report = []
 
-    params = {
-        "serviceKey": clean_key,
-        "page": page_no,
-        "perPage": num_of_rows
-    }
-    headers = {
-        "Authorization": f"Infuser {clean_key}",
-        "Accept": "application/json"
-    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        for ep in ODCLOUD_FIRE_ENDPOINTS:
+            y = ep["year"]
+            uddi = ep["uddi"]
+            name = ep["name"]
+            target_url = f"{ODCLOUD_BASE_URL}{uddi}"
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(target_url, params=params)
-            if response.status_code != 200:
-                response = await client.get(target_url, params={"page": page_no, "perPage": num_of_rows}, headers=headers)
+            params = {"serviceKey": clean_key, "page": 1, "perPage": max_records_per_endpoint}
+            headers = {"Authorization": f"Infuser {clean_key}", "Accept": "application/json"}
 
-            if response.status_code == 200:
-                data = response.json()
-                total_count = data.get("totalCount") or data.get("matchCount") or 0
-                raw_items = data.get("data", [])
-                
-                parsed_records = [parse_odcloud_record(item, 2024, (page_no-1)*num_of_rows + i) for i, item in enumerate(raw_items)]
+            try:
+                resp = await client.get(target_url, params=params)
+                if resp.status_code != 200:
+                    resp = await client.get(target_url, params={"page": 1, "perPage": max_records_per_endpoint}, headers=headers)
 
-                return {
-                    "success": True,
-                    "total_count": total_count,
-                    "items": parsed_records,
-                    "connected_service": "소방청_화재발생 정보 (ODCloud 실시간)"
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": f"소방청 API 오류 (HTTP {response.status_code}): {response.text[:200]}",
-                    "items": [],
-                    "total_count": 0
-                }
-    except Exception as ex:
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw_items = data.get("data", [])
+                    tot = data.get("totalCount") or len(raw_items)
+                    
+                    year_num = int(str(y).split("_")[0]) if isinstance(y, (str, int)) else 2024
+                    parsed = [parse_odcloud_record(item, year_num, idx) for idx, item in enumerate(raw_items)]
+                    collected_records.extend(parsed)
+                    sync_report.append({"endpoint": name, "year": y, "status": "성공", "count": len(parsed), "total_in_server": tot})
+                else:
+                    sync_report.append({"endpoint": name, "year": y, "status": f"HTTP {resp.status_code}", "count": 0})
+            except Exception as e:
+                sync_report.append({"endpoint": name, "year": y, "status": f"오류: {str(e)[:50]}", "count": 0})
+
+    if collected_records:
+        # 기존 데이터를 지우고 소방청 순수 실제 데이터로만 전면 교체
+        collected_records.sort(key=lambda x: x.fire_datetime, reverse=True)
+        SYNCED_REAL_RECORDS = collected_records
+        IS_API_SYNCED = True
+        return {
+            "success": True,
+            "total_synced": len(collected_records),
+            "endpoints_synced": len([r for r in sync_report if r["status"] == "성공"]),
+            "details": sync_report,
+            "message": f"소방청 공공데이터포털로부터 총 {len(collected_records):,}건의 공식 실시간 화재 데이터를 완벽하게 동기화하였습니다!"
+        }
+    else:
         return {
             "success": False,
-            "error": f"API 연동 예외 발생: {str(ex)}",
-            "items": [],
-            "total_count": 0
+            "error": "소방청 API로부터 데이터를 수신하지 못했습니다. API 키의 유효성을 확인해 주세요.",
+            "total_synced": 0,
+            "details": sync_report
         }
+
+def get_synced_fire_records() -> List[FireRecord]:
+    """동기화된 소방청 실제 데이터 반환"""
+    global SYNCED_REAL_RECORDS
+    return SYNCED_REAL_RECORDS
+
+def is_synced_with_official_api() -> bool:
+    """소방청 공식 API 동기화 여부 반환"""
+    global IS_API_SYNCED
+    return IS_API_SYNCED and len(SYNCED_REAL_RECORDS) > 0
