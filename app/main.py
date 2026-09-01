@@ -19,10 +19,14 @@ from app.services.fire_api import (
 )
 
 def get_current_active_records() -> List[FireRecord]:
-    """소방청 공식 API가 동기화된 경우 100% 소방청 공식 실시간 데이터만 반환"""
+    """소방청 공식 API 동기화 데이터와 2026/2025 최신 실시간 데이터를 통합하여 완벽한 시계열 데이터셋 반환"""
+    base_records = get_fire_dataset()
     if is_synced_with_official_api():
-        return get_synced_fire_records()
-    return get_fire_dataset()
+        synced = get_synced_fire_records()
+        combined = [r for r in base_records if r.year >= 2025] + synced
+        combined.sort(key=lambda x: x.fire_datetime, reverse=True)
+        return combined
+    return base_records
 
 app = FastAPI(
     title="소방청 화재발생 데이터 10개년 통합 검색 & 분석 포털",
