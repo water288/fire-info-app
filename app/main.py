@@ -277,11 +277,26 @@ async def search_fire_data(
         target_sgg = sigungu if (sigungu and sigungu != "전체") else "음성군"
         d_list = ["맹동면", "음성읍", "금왕읍", "대소면", "삼성면", "생극면", "감곡면", "원남면", "소이면"]
         
+        now_cur = datetime.now()
+        cur_m = now_cur.month
+        cur_d = now_cur.day
+        cur_h = now_cur.hour
         y_val = start_year or 2026
+
         for i in range(start_idx, min(total_count, end_idx)):
-            m = random.randint(1, 8 if y_val == 2026 else 12)
-            d = random.randint(1, 28)
-            h = random.randint(0, 23)
+            if y_val == 2026:
+                m = random.randint(1, cur_m)
+                if m == cur_m:
+                    d = random.randint(1, cur_d)
+                    h = random.randint(0, max(0, cur_h - 1)) if (d == cur_d and cur_h > 0) else random.randint(0, 23)
+                else:
+                    d = random.randint(1, 28)
+                    h = random.randint(0, 23)
+            else:
+                m = random.randint(1, 12)
+                d = random.randint(1, 28)
+                h = random.randint(0, 23)
+
             mi = random.randint(0, 59)
             dt_str = f"{y_val}-{m:02d}-{d:02d} {h:02d}:{mi:02d}"
             c_cat = cause_category if (cause_category and cause_category != "전체") else random.choice(list(FIRE_CAUSES.keys()))
@@ -311,6 +326,7 @@ async def search_fire_data(
                 summary=f"[{target_sido} {target_sgg}] {l_cat} 화재 발생. 원인: {c_cat}",
                 is_realtime=(y_val == 2026)
             ))
+        page_items.sort(key=lambda x: x.fire_datetime, reverse=(sort_order.lower() == "desc"))
 
     return SearchResponse(
         total_count=total_count,
