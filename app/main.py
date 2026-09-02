@@ -17,7 +17,8 @@ from app.services.mock_data import (
     OFFICIAL_10YEAR_STATS,
     calculate_real_fire_stats,
     SPECIFIC_EUPMYEONDONG,
-    DONG_SAMPLES
+    DONG_SAMPLES,
+    get_kst_now
 )
 from app.services.fire_api import (
     test_odcloud_connection,
@@ -315,7 +316,7 @@ async def search_fire_data(
     else:
         # 2. filtered 범위를 벗어난 페이징: 해당 페이지만의 단조 시계열 즉시 계산
         page_items = []
-        now_cur = datetime.now()
+        now_cur = get_kst_now().replace(tzinfo=None)
         s_yr = start_year or 2007
         e_yr = end_year or 2026
         start_dt = datetime(s_yr, 1, 1, 0, 0)
