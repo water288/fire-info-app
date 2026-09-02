@@ -253,15 +253,37 @@
                 </div>
 
                 <!-- 연도 선택 버튼군 (2007~2026년 20개년 전체 및 실시간) -->
-                <div class="flex items-center gap-1.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
-                    <span class="text-xs text-slate-400 mr-1 font-medium">연도 바로가기:</span>
-                    <button onclick="setYearPreset(2026)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600 hover:border-emerald-400 transition flex items-center gap-1 shadow-sm" data-val="2026">
-                        <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-[11px]"></i> 2026년 실시간
-                    </button>
-                    <button onclick="setYearPreset('all')" class="year-preset-btn active px-2.5 py-1 rounded-lg text-xs font-medium bg-red-600 text-white border border-red-500 transition" data-val="all">전체 20년 (2007~2026)</button>
-                    <button onclick="setYearPreset('recent10')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent10">최근 10년</button>
-                    <button onclick="setYearPreset('recent5')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent5">최근 5년</button>
-                    <button onclick="setYearPreset('recent3')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent3">최근 3년</button>
+                <div class="flex flex-col gap-2 w-full md:w-auto items-start md:items-end">
+                    <!-- 1. 연도 바로가기 -->
+                    <div class="flex items-center gap-1.5 flex-wrap justify-start md:justify-end">
+                        <span class="text-xs text-slate-400 mr-1 font-medium">연도 바로가기:</span>
+                        <button onclick="setYearPreset(2026)" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600 hover:border-emerald-400 transition flex items-center gap-1 shadow-sm" data-val="2026">
+                            <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-[11px]"></i> 2026년 실시간
+                        </button>
+                        <button onclick="setYearPreset('all')" class="year-preset-btn active px-2.5 py-1 rounded-lg text-xs font-medium bg-red-600 text-white border border-red-500 transition" data-val="all">전체 20년 (2007~2026)</button>
+                        <button onclick="setYearPreset('recent10')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent10">최근 10년</button>
+                        <button onclick="setYearPreset('recent5')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent5">최근 5년</button>
+                        <button onclick="setYearPreset('recent3')" class="year-preset-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent3">최근 3년</button>
+                    </div>
+
+                    <!-- 2. 조회 기간 / 일자 선택 바로가기 바 (당일, 날짜 직접선택, 최근 3일, 최근 7일, 최근 1개월) -->
+                    <div class="flex items-center gap-1.5 flex-wrap justify-start md:justify-end">
+                        <span class="text-xs text-orange-400 mr-1 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-calendar-days text-orange-400 text-xs"></i> 기간/일자 선택:
+                        </span>
+                        <button onclick="setPeriodFilter('TODAY')" id="btnPeriodToday" class="period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1">
+                            <i class="fa-solid fa-fire text-amber-300 animate-pulse text-[10px]"></i> 당일 (오늘)
+                        </button>
+                        <div class="relative inline-flex items-center">
+                            <button onclick="triggerCustomDatePicker()" id="btnPeriodCustom" class="period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-orange-500 hover:text-white transition flex items-center gap-1">
+                                <i class="fa-regular fa-calendar-check text-orange-400 text-[11px]"></i> <span id="customDateBtnLabel">📅 날짜 직접 선택</span>
+                            </button>
+                            <input type="date" id="customDateInput" onchange="onCustomDatePicked(this.value)" class="absolute opacity-0 pointer-events-none w-0 h-0" max="2026-12-31" min="2007-01-01" />
+                        </div>
+                        <button onclick="setPeriodFilter('3DAYS')" id="btnPeriod3Days" class="period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 3일</button>
+                        <button onclick="setPeriodFilter('7DAYS')" id="btnPeriod7Days" class="period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 7일</button>
+                        <button onclick="setPeriodFilter('1MONTH')" id="btnPeriod1Month" class="period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 1개월</button>
+                    </div>
                 </div>
             </div>
 
@@ -696,6 +718,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v26"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v27"></script>
 </body>
 </html>

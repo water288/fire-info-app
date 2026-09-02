@@ -4,8 +4,11 @@ const state = {
     viewMode: localStorage.getItem('view_mode') || (window.innerWidth < 768 ? 'mobile' : 'pc'),
     filters: {
         keyword: '',
-        startYear: 2016,
-        endYear: 2025,
+        startYear: 2007,
+        endYear: 2026,
+        startDate: '',
+        endDate: '',
+        period: null,
         sido: '',
         sigungu: '',
         causeCategory: '',
@@ -284,6 +287,16 @@ function setYearPreset(preset) {
     ensureYearOption(startSel, 2026);
     ensureYearOption(endSel, 2026);
 
+    // 연도 프리셋 선택 시 날짜 상세 필터 초기화
+    state.filters.period = null;
+    state.filters.startDate = '';
+    state.filters.endDate = '';
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
+    });
+    const customLabel = document.getElementById('customDateBtnLabel');
+    if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+
     if (preset === 'all') {
         startSel.value = "2007";
         endSel.value = "2026";
@@ -302,6 +315,107 @@ function setYearPreset(preset) {
     }
 
     applyFilters(1);
+}
+
+// 🔒 조회 기간 / 일자 선택 바로가기 (당일, 날짜 직접선택, 최근 3일, 최근 7일, 최근 1개월)
+function setPeriodFilter(periodId, customDateVal = null) {
+    state.filters.period = periodId;
+
+    // 모든 기간 버튼 스타일 초기화
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
+    });
+
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    const formatDate = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dt = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dt}`;
+    };
+
+    const startSel = document.getElementById('startYearSelect');
+    const endSel = document.getElementById('endYearSelect');
+
+    if (periodId === 'TODAY') {
+        const btn = document.getElementById('btnPeriodToday');
+        if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
+        state.filters.startDate = todayStr;
+        state.filters.endDate = todayStr;
+        startSel.value = String(yyyy);
+        endSel.value = String(yyyy);
+        const customLabel = document.getElementById('customDateBtnLabel');
+        if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+    } else if (periodId === 'CUSTOM') {
+        const btn = document.getElementById('btnPeriodCustom');
+        if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
+        const chosen = customDateVal || state.filters.customDate || todayStr;
+        state.filters.startDate = chosen;
+        state.filters.endDate = chosen;
+        const chosenYear = chosen.split('-')[0];
+        startSel.value = chosenYear;
+        endSel.value = chosenYear;
+        const customLabel = document.getElementById('customDateBtnLabel');
+        if (customLabel) customLabel.innerText = `📅 ${chosen}`;
+    } else if (periodId === '3DAYS') {
+        const btn = document.getElementById('btnPeriod3Days');
+        if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
+        const d3 = new Date(today);
+        d3.setDate(d3.getDate() - 2);
+        state.filters.startDate = formatDate(d3);
+        state.filters.endDate = todayStr;
+        startSel.value = String(d3.getFullYear());
+        endSel.value = String(yyyy);
+        const customLabel = document.getElementById('customDateBtnLabel');
+        if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+    } else if (periodId === '7DAYS') {
+        const btn = document.getElementById('btnPeriod7Days');
+        if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
+        const d7 = new Date(today);
+        d7.setDate(d7.getDate() - 6);
+        state.filters.startDate = formatDate(d7);
+        state.filters.endDate = todayStr;
+        startSel.value = String(d7.getFullYear());
+        endSel.value = String(yyyy);
+        const customLabel = document.getElementById('customDateBtnLabel');
+        if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+    } else if (periodId === '1MONTH') {
+        const btn = document.getElementById('btnPeriod1Month');
+        if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
+        const d30 = new Date(today);
+        d30.setDate(d30.getDate() - 29);
+        state.filters.startDate = formatDate(d30);
+        state.filters.endDate = todayStr;
+        startSel.value = String(d30.getFullYear());
+        endSel.value = String(yyyy);
+        const customLabel = document.getElementById('customDateBtnLabel');
+        if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+    }
+
+    applyFilters(1);
+}
+
+function triggerCustomDatePicker() {
+    const picker = document.getElementById('customDateInput');
+    if (picker) {
+        if (picker.showPicker) {
+            picker.showPicker();
+        } else {
+            picker.click();
+        }
+    }
+}
+
+function onCustomDatePicked(val) {
+    if (val) {
+        state.filters.customDate = val;
+        setPeriodFilter('CUSTOM', val);
+    }
 }
 
 function ensureYearOption(selectEl, year) {
@@ -332,6 +446,11 @@ function buildQueryParams(page = 1) {
     const eYear = document.getElementById('endYearSelect').value;
     if (sYear) params.append('start_year', sYear);
     if (eYear) params.append('end_year', eYear);
+
+    // 일자/기간 필터 전달
+    if (state.filters.startDate) params.append('start_date', state.filters.startDate);
+    if (state.filters.endDate) params.append('end_date', state.filters.endDate);
+    if (state.filters.period) params.append('period', state.filters.period);
 
     const sido = document.getElementById('sidoSelect').value;
     if (sido) params.append('sido', sido);
