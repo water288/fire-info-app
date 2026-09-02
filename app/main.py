@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from app.models import FireRecord, SearchResponse, StatsSummary
 from app.services.mock_data import (
     get_fire_dataset,
+    get_live_today_events,
     REGIONS,
     FIRE_CAUSES,
     LOCATIONS,
@@ -426,6 +427,8 @@ async def search_fire_data(
         year_scope_label = f"{start_year}년"
     else:
         year_scope_label = f"{start_year}~{end_year}년"
+
+    year_scope_total = real_stat["total_fires"]
 
     # 오늘 당일 전국 실시간 총 발생 건수 계산 (어떤 기간을 보든 오늘의 실시간 총건수로 정확히 고정)
     now_dt = get_kst_now().replace(tzinfo=None)
