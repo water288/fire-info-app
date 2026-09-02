@@ -684,6 +684,15 @@ def download_complete_excel():
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+@app.get("/")
+def serve_index_html():
+    """브라우저 캐시 방지 헤더가 포함된 최신 index.html 서빙"""
+    headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    return FileResponse("app/static/index.html", headers=headers)
 
 # 정적 파일 서빙 (프론트엔드 UI)
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
