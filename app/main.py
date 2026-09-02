@@ -413,12 +413,31 @@ async def search_fire_data(
                 is_realtime=(y_val == 2026)
             ))
 
+    # 연도 범위 라벨 및 건수 계산
+    if start_year == 2026 and end_year == 2026:
+        year_scope_label = "2026년 실시간"
+    elif start_year == 2007 and end_year == 2026:
+        year_scope_label = "전체 20년 (2007~2026)"
+    elif start_year == end_year:
+        year_scope_label = f"{start_year}년"
+    else:
+        year_scope_label = f"{start_year}~{end_year}년"
+
+    year_scope_total = real_stat["total_fires"]
+    
+    # 오늘 당일 실시간 총 발생 건수 계산
+    today_str = get_kst_now().strftime("%Y-%m-%d")
+    today_total = len([r for r in source_data if r.fire_date == today_str])
+
     return SearchResponse(
         total_count=total_count,
         page=page,
         page_size=page_size,
         total_pages=total_pages,
         items=page_items,
+        year_scope_total=year_scope_total,
+        year_scope_label=year_scope_label,
+        today_total=today_total,
         national_total_fires=real_stat["national_total_fires"],
         sido_total_fires=real_stat["sido_total_fires"],
         sido_percentage=real_stat["sido_percentage"],

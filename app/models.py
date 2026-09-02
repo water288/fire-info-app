@@ -49,6 +49,9 @@ class SearchResponse(BaseModel):
     page_size: int
     total_pages: int
     items: List[FireRecord]
+    year_scope_total: Optional[int] = Field(default=None, description="선택된 연도 범위의 총 건수 (예: 2026년 실시간 건수 25,726건)")
+    year_scope_label: Optional[str] = Field(default=None, description="선택된 연도 범위 라벨 (예: 2026년 실시간)")
+    today_total: Optional[int] = Field(default=None, description="지금 당일(오늘) 전국 실시간 발생 총 건수 (예: 141건)")
     national_total_fires: Optional[int] = None
     sido_total_fires: Optional[int] = None
     sido_percentage: Optional[float] = None

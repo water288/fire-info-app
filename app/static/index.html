@@ -455,10 +455,26 @@
             
             <!-- 테이블 상단 툴바 -->
             <div class="px-5 py-3.5 border-b border-slate-700/70 flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center space-x-2 flex-wrap gap-y-1">
-                    <h3 class="text-sm font-bold text-white">화재발생 상세 목록</h3>
-                    <span id="resultCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700 font-medium">검색결과: 0건</span>
-                    <span id="causePercentageBadge" class="hidden text-xs px-2.5 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/80 font-medium items-center gap-1.5 shadow-sm">
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1.5">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-table-list text-red-500"></i> 화재발생 상세 목록
+                    </h3>
+                    <!-- 1. 연도 바로가기 선택조건 건수 배지 -->
+                    <span id="yearScopeBadge" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900/90 text-slate-200 border border-slate-700 font-medium inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-regular fa-calendar-check text-emerald-400"></i>
+                        <span id="yearScopeText">2026년 실시간: 25,726건</span>
+                    </span>
+                    <!-- 2. 지금의 당일건수 배지 -->
+                    <span id="todayTotalBadge" class="text-xs px-2.5 py-1 rounded-lg bg-orange-950/80 text-orange-300 border border-orange-700/80 font-semibold inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-fire text-amber-400 animate-pulse text-[11px]"></i>
+                        <span id="todayTotalText">오늘 당일: 141건</span>
+                    </span>
+                    <!-- 3. 현재 검색조건 건수 배지 -->
+                    <span id="resultCountBadge" class="text-xs px-2.5 py-1 rounded-lg bg-red-950/90 text-red-300 border border-red-600/90 font-bold inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass text-red-400"></i>
+                        <span id="resultCountText">검색결과: 37건</span>
+                    </span>
+                    <span id="causePercentageBadge" class="hidden text-xs px-2.5 py-1 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-800/80 font-medium items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-fire-flame-curved text-amber-400"></i>
                         <span id="causePercentageText">발화요인: 0건 (0%)</span>
                     </span>
@@ -717,6 +733,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v30"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v31"></script>
 </body>
 </html>
