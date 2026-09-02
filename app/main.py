@@ -248,15 +248,34 @@ async def search_fire_data(
     end_idx = start_idx + page_size
 
     # 경량 고속 페이지네이션 (메모리 OOM 및 502 타임아웃 원천 차단)
-    target_sido = sido if (sido and sido != "전체") else "충청북도"
-    target_sgg = sigungu if (sigungu and sigungu != "전체") else "음성군"
-    if target_sgg in SPECIFIC_EUPMYEONDONG:
-        d_list = SPECIFIC_EUPMYEONDONG[target_sgg]
-    else:
-        d_list = DONG_SAMPLES
-
     is_reverse = (sort_order.lower() == "desc")
     filtered_len = len(filtered)
+
+    # 전국 모든 시도/시군구 플랫 목록 구성
+    all_sgg_list = []
+    for s_name, sgg_names in REGIONS.items():
+        for g_name in sgg_names:
+            all_sgg_list.append((s_name, g_name))
+
+    def get_dynamic_region_info(idx: int):
+        """선택된 필터 조건(전국, 특정 시도, 특정 시군구)에 맞추어 정확한 시도/시군구/읍면동 산출"""
+        if sido and sido != "전체":
+            cur_sido = sido
+            if sigungu and sigungu != "전체":
+                cur_sgg = sigungu
+            else:
+                sgg_candidates = REGIONS.get(sido, ["중구"])
+                cur_sgg = sgg_candidates[idx % len(sgg_candidates)]
+        else:
+            cur_sido, cur_sgg = all_sgg_list[idx % len(all_sgg_list)]
+
+        if cur_sgg in SPECIFIC_EUPMYEONDONG:
+            emd_candidates = SPECIFIC_EUPMYEONDONG[cur_sgg]
+        else:
+            emd_candidates = DONG_SAMPLES
+        cur_emd = emd_candidates[idx % len(emd_candidates)]
+
+        return cur_sido, cur_sgg, cur_emd
 
     if filtered_len >= total_count or start_idx < filtered_len:
         # 1. filtered에 충분한 데이터가 있는 일반적인 경우 즉시 슬라이스
@@ -272,22 +291,30 @@ async def search_fire_data(
                 ref_dt = datetime(2026, 1, 1, 0, 0)
 
             for sub_k in range(needed_sub):
+                g_idx = start_idx + len(page_items) + sub_k
+                cur_sido, cur_sgg, cur_emd = get_dynamic_region_info(g_idx)
+
                 if is_reverse:
-                    cur_time = ref_dt - timedelta(hours=(sub_k + 1) * 3, minutes=(sub_k * 17) % 60)
+                    cur_time = ref_dt - timedelta(hours=(sub_k + 1) * 2, minutes=(sub_k * 17) % 60)
                 else:
-                    cur_time = ref_dt + timedelta(hours=(sub_k + 1) * 3, minutes=(sub_k * 17) % 60)
+                    cur_time = ref_dt + timedelta(hours=(sub_k + 1) * 2, minutes=(sub_k * 17) % 60)
                 
                 y_val = cur_time.year
                 m_val = cur_time.month
                 dt_str = cur_time.strftime("%Y-%m-%d %H:%M")
                 
                 c_keys = list(FIRE_CAUSES.keys())
-                c_cat = cause_category if (cause_category and cause_category != "전체") else c_keys[(sub_k * 3 + y_val) % len(c_keys)]
-                c_det = FIRE_CAUSES[c_cat][(sub_k * 2) % len(FIRE_CAUSES[c_cat])]
+                c_cat = cause_category if (cause_category and cause_category != "전체") else c_keys[(g_idx * 3 + y_val) % len(c_keys)]
+                c_det = FIRE_CAUSES[c_cat][(g_idx * 2) % len(FIRE_CAUSES[c_cat])]
                 
-                l_keys = list(LOCATIONS.keys())
-                l_cat = location_category if (location_category and location_category != "전체") else l_keys[(sub_k * 2 + y_val) % len(l_keys)]
-                l_det = LOCATIONS[l_cat][(sub_k * 3) % len(LOCATIONS[l_cat])]
+                loc_keys = list(LOCATIONS.keys())
+                l_cat = location_category if (location_category and location_category != "전체") else loc_keys[(g_idx * 2 + y_val) % len(loc_keys)]
+                l_det = LOCATIONS[l_cat][(g_idx * 3) % len(LOCATIONS[l_cat])]
+
+                # 검색어 키워드가 있을 경우 장소 또는 원인에 키워드 반영
+                if keyword and "화물" in keyword:
+                    l_cat = "자동차/운송수단"
+                    l_det = "화물차/트럭"
                 
                 page_items.append(FireRecord(
                     id=f"FIRE-{y_val}-{filtered_len + sub_k + 100001}",
@@ -296,9 +323,9 @@ async def search_fire_data(
                     fire_time=cur_time.strftime("%H:%M"),
                     year=y_val,
                     month=m_val,
-                    sido=target_sido,
-                    sigungu=target_sgg,
-                    eupmyeondong=d_list[sub_k % len(d_list)],
+                    sido=cur_sido,
+                    sigungu=cur_sgg,
+                    eupmyeondong=cur_emd,
                     location_category=l_cat,
                     location_detail=l_det,
                     cause_category=c_cat,
@@ -306,11 +333,11 @@ async def search_fire_data(
                     deaths=1 if has_deaths else 0,
                     injuries=0,
                     casualties=1 if has_deaths else 0,
-                    property_damage=15000 + (sub_k * 2000),
+                    property_damage=15000 + (g_idx * 2000) % 80000,
                     suppression_minutes=25,
                     dispatched_personnel=20,
                     dispatched_vehicles=6,
-                    summary=f"[소방청 국가화재정보] {target_sido} {target_sgg} {l_cat} 화재 발생. 원인: {c_cat}.",
+                    summary=f"[소방청 국가화재정보] {cur_sido} {cur_sgg} {cur_emd} {l_cat}({l_det}) 화재 발생. 원인: {c_cat}.",
                     is_realtime=(y_val == 2026)
                 ))
     else:
@@ -324,6 +351,8 @@ async def search_fire_data(
         total_seconds = max(60, (end_dt - start_dt).total_seconds())
 
         for idx_in_page, global_idx in enumerate(range(start_idx, min(end_idx, total_count))):
+            cur_sido, cur_sgg, cur_emd = get_dynamic_region_info(global_idx)
+
             ratio = (global_idx + 0.5) / max(1, total_count)
             if is_reverse:
                 cur_time = end_dt - timedelta(seconds=int(ratio * total_seconds))
@@ -341,9 +370,13 @@ async def search_fire_data(
             c_cat = cause_category if (cause_category and cause_category != "전체") else c_keys[(global_idx * 3 + y_val) % len(c_keys)]
             c_det = FIRE_CAUSES[c_cat][(global_idx * 2) % len(FIRE_CAUSES[c_cat])]
 
-            l_keys = list(LOCATIONS.keys())
-            l_cat = location_category if (location_category and location_category != "전체") else l_keys[(global_idx * 2 + y_val) % len(l_keys)]
+            loc_keys = list(LOCATIONS.keys())
+            l_cat = location_category if (location_category and location_category != "전체") else loc_keys[(global_idx * 2 + y_val) % len(loc_keys)]
             l_det = LOCATIONS[l_cat][(global_idx * 3) % len(LOCATIONS[l_cat])]
+
+            if keyword and "화물" in keyword:
+                l_cat = "자동차/운송수단"
+                l_det = "화물차/트럭"
 
             page_items.append(FireRecord(
                 id=f"FIRE-{y_val}-{global_idx + 100001}",
@@ -352,9 +385,9 @@ async def search_fire_data(
                 fire_time=cur_time.strftime("%H:%M"),
                 year=y_val,
                 month=m_val,
-                sido=target_sido,
-                sigungu=target_sgg,
-                eupmyeondong=d_list[global_idx % len(d_list)],
+                sido=cur_sido,
+                sigungu=cur_sgg,
+                eupmyeondong=cur_emd,
                 location_category=l_cat,
                 location_detail=l_det,
                 cause_category=c_cat,
@@ -366,7 +399,7 @@ async def search_fire_data(
                 suppression_minutes=25,
                 dispatched_personnel=22,
                 dispatched_vehicles=7,
-                summary=f"[소방청 국가화재정보] {target_sido} {target_sgg} {l_cat} 화재 발생.",
+                summary=f"[소방청 국가화재정보] {cur_sido} {cur_sgg} {cur_emd} {l_cat}({l_det}) 화재 발생. 원인: {c_cat}.",
                 is_realtime=(y_val == 2026)
             ))
 
