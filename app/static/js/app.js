@@ -66,6 +66,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
         console.error('refreshAllData error:', e);
     }
+
+    // 30초 주기 실시간 라이브 자동 동기화 (사용자가 2026년 실시간을 조회 중일 때 백그라운드 자동 갱신)
+    setInterval(async () => {
+        const endYearVal = parseInt(document.getElementById('endYearSelect').value);
+        if (endYearVal === 2026 && state.pagination.page === 1) {
+            try {
+                await fetchTableData(1);
+            } catch (err) {
+                console.warn('실시간 자동 동기화 대기 중:', err);
+            }
+        }
+    }, 30000);
 });
 
 // [모드 전환] PC 모드 vs 스마트폰 모드
