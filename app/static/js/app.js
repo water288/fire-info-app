@@ -35,6 +35,29 @@ const state = {
     }
 };
 
+// 🔒 네트워크 불안정 및 Render Cold Start 대응 고신뢰성 API 통신 헬퍼
+async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(url, options);
+            if (res.ok) {
+                return res;
+            }
+            if (res.status === 502 || res.status === 503 || res.status === 429) {
+                console.warn(`서버 응답 대기 (${res.status}), ${delay}ms 후 재시도 (${i+1}/${retries})...`);
+                await new Promise(r => setTimeout(r, delay * (i + 1)));
+                continue;
+            }
+            return res;
+        } catch (err) {
+            if (i === retries - 1) throw err;
+            console.warn(`네트워크 통신 대기, ${delay}ms 후 재시도 (${i+1}/${retries})...`);
+            await new Promise(r => setTimeout(r, delay * (i + 1)));
+        }
+    }
+    return fetch(url, options);
+}
+
 // DOM 로드 완료 후 초기화
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -65,11 +88,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         await refreshAllData();
     } catch (e) {
         console.error('refreshAllData error:', e);
+        // 1.5초 후 자동 2차 복구 시도
+        setTimeout(refreshAllData, 1500);
     }
 
     // 30초 주기 실시간 라이브 자동 동기화 (사용자가 2026년 실시간을 조회 중일 때 백그라운드 자동 갱신)
     setInterval(async () => {
-        const endYearVal = parseInt(document.getElementById('endYearSelect').value);
+        const endYearSelectEl = document.getElementById('endYearSelect');
+        const endYearVal = endYearSelectEl ? parseInt(endYearSelectEl.value) : 2026;
         if (endYearVal === 2026 && state.pagination.page === 1) {
             try {
                 await fetchTableData(1);
@@ -164,7 +190,7 @@ function updateModeBadge() {
 // 2. 메타데이터 로드
 async function loadMetadata() {
     try {
-        const res = await fetch('/api/meta');
+        const res = await fetchWithRetry('/api/meta');
         const data = await res.json();
         state.metadata = data;
 
@@ -360,7 +386,7 @@ async function refreshAllData() {
 // 5. 화재 리스트 데이터 조회
 async function fetchTableData(page = 1) {
     const params = buildQueryParams(page);
-    const res = await fetch(`/api/fire-data?${params.toString()}`);
+    const res = await fetchWithRetry(`/api/fire-data?${params.toString()}`);
     const data = await res.json();
 
     state.currentItems = data.items;
@@ -412,7 +438,7 @@ async function fetchTableData(page = 1) {
 // 6. 통계 데이터 조회 및 KPI & 차트 렌더링
 async function fetchStatsData() {
     const params = buildQueryParams(1);
-    const res = await fetch(`/api/stats?${params.toString()}`);
+    const res = await fetchWithRetry(`/api/stats?${params.toString()}`);
     const stats = await res.json();
 
     renderKPIs(stats);
