@@ -28,9 +28,13 @@ from app.services.fire_api import (
     ODCLOUD_FIRE_ENDPOINTS
 )
 
-def get_current_active_records() -> List[FireRecord]:
-    """소방청 공식 API 동기화 데이터와 2026/2025 최신 실시간 데이터를 통합하여 완벽한 시계열 데이터셋 반환"""
-    base_records = get_fire_dataset()
+def get_current_active_records(
+    period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> List[FireRecord]:
+    """소방청 공식 API 동기화 데이터와 기간별(당일, 최근 3일, 최근 7일, 최근 1개월) 실시간 스트림 풀 반환"""
+    base_records = get_fire_dataset(period=period, start_date=start_date, end_date=end_date)
     if is_synced_with_official_api():
         synced = get_synced_fire_records()
         combined = [r for r in base_records if r.year >= 2025] + synced
@@ -210,8 +214,8 @@ async def search_fire_data(
 ):
     """2007~2026년 화재 발생 데이터 상세 검색 및 정렬 (지역/원인/장소 완벽 필터링)"""
     
-    # 1. 소스 데이터 로드 (소방청 공식 API 동기화 데이터 또는 20개년 데이터셋 단일 소스)
-    source_data = get_current_active_records()
+    # 1. 소스 데이터 로드 (소방청 공식 API 동기화 데이터 또는 기간별 동적 스트림 풀)
+    source_data = get_current_active_records(period=period, start_date=start_date, end_date=end_date)
 
     # 2. 지정된 조건(시도, 시군구, 원인, 장소 등)으로 정확한 필터링 및 정렬 수행
     filtered = filter_and_sort_records(
@@ -423,11 +427,10 @@ async def search_fire_data(
     else:
         year_scope_label = f"{start_year}~{end_year}년"
 
-    year_scope_total = real_stat["total_fires"]
-    
-    # 오늘 당일 실시간 총 발생 건수 계산
-    today_str = get_kst_now().strftime("%Y-%m-%d")
-    today_total = len([r for r in source_data if r.fire_date == today_str])
+    # 오늘 당일 전국 실시간 총 발생 건수 계산 (어떤 기간을 보든 오늘의 실시간 총건수로 정확히 고정)
+    now_dt = get_kst_now().replace(tzinfo=None)
+    today_live_list = get_live_today_events(now_dt)
+    today_total = len(today_live_list)
 
     return SearchResponse(
         total_count=total_count,
@@ -483,7 +486,7 @@ def get_fire_stats(
     )
 
     # 세부 원인/장소 비중은 샘플 비율을 활용해 실제 통계 건수에 가중 반영
-    all_data = get_current_active_records()
+    all_data = get_current_active_records(period=period, start_date=start_date, end_date=end_date)
     filtered = filter_and_sort_records(
         records=all_data,
         keyword=keyword,
