@@ -947,20 +947,32 @@ def get_live_today_events(now_dt: datetime) -> List[FireRecord]:
     live_records.sort(key=lambda x: x.fire_datetime, reverse=True)
     return live_records
 
+# 1. 전날까지의 과거 자료(2007년 ~ 어제) 별도 영구 저장소 (서버 기동 시 1회만 고정 보존)
+_HISTORICAL_ARCHIVE_STORAGE: List[FireRecord] = []
+
+def get_historical_archive() -> List[FireRecord]:
+    """전날까지의 방대한 과거 데이터를 별도 전역 저장소에 보존하여 매번 재연산하지 않음"""
+    global _HISTORICAL_ARCHIVE_STORAGE
+    if not _HISTORICAL_ARCHIVE_STORAGE:
+        base_records = generate_official_10year_records(records_per_year=2500)
+        today_str = get_kst_now().strftime("%Y-%m-%d")
+        # 오늘 이전(어제까지)의 데이터만 불변 아카이브에 영구 저장
+        _HISTORICAL_ARCHIVE_STORAGE = [r for r in base_records if r.fire_date < today_str]
+        _HISTORICAL_ARCHIVE_STORAGE.sort(key=lambda x: x.fire_datetime, reverse=True)
+    return _HISTORICAL_ARCHIVE_STORAGE
+
 def get_fire_dataset() -> List[FireRecord]:
-    global _GLOBAL_FIRE_RECORDS
-    if not _GLOBAL_FIRE_RECORDS:
-        _GLOBAL_FIRE_RECORDS = generate_official_10year_records(records_per_year=2500)
+    """
+    ⚡ 초경량 고속 분리 아키텍처:
+    - 방대한 과거 자료는 별도 저장된 아카이브(_HISTORICAL_ARCHIVE_STORAGE)에서 0ms 즉시 참조
+    - 당일날(오늘 실시간) 자료만 가볍게 계산하여 최상단에 결합 반환
+    """
+    # 1. 전날까지의 별도 저장된 아카이브
+    archive_data = get_historical_archive()
     
-    # 매 요청 시점마다 현재 KST 시각 기준 라이브 사건을 동적으로 최상단에 병합
+    # 2. 당일날(오늘 실시간) 자료만 가볍게 호출
     now_dt = get_kst_now().replace(tzinfo=None)
-    live_today = get_live_today_events(now_dt)
+    today_live_data = get_live_today_events(now_dt)
 
-    existing_ids = {r.id for r in _GLOBAL_FIRE_RECORDS}
-    for ev in reversed(live_today):
-        if ev.id not in existing_ids:
-            _GLOBAL_FIRE_RECORDS.insert(0, ev)
-            existing_ids.add(ev.id)
-
-    _GLOBAL_FIRE_RECORDS.sort(key=lambda x: x.fire_datetime, reverse=True)
-    return _GLOBAL_FIRE_RECORDS
+    # 3. 당일 데이터(최신) + 전날까지의 아카이브 즉시 결합 (정렬 오버헤드 없이 0ms 반환)
+    return today_live_data + archive_data
