@@ -4,11 +4,11 @@ const state = {
     viewMode: localStorage.getItem('view_mode') || (window.innerWidth < 768 ? 'mobile' : 'pc'),
     filters: {
         keyword: '',
-        startYear: 2007,
+        startYear: 2026,
         endYear: 2026,
-        startDate: '',
-        endDate: '',
-        period: null,
+        startDate: '2026-09-03',
+        endDate: '2026-09-03',
+        period: 'TODAY',
         sido: '',
         sigungu: '',
         causeCategory: '',
@@ -88,11 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        await refreshAllData();
+        // 기본 시작 상태: 당일 (오늘 실시간) 자동 활성화
+        setPeriodFilter('TODAY');
     } catch (e) {
-        console.error('refreshAllData error:', e);
-        // 1.5초 후 자동 2차 복구 시도
-        setTimeout(refreshAllData, 1500);
+        console.error('setPeriodFilter TODAY error:', e);
+        await refreshAllData();
     }
 
     // 30초 주기 실시간 라이브 자동 동기화 (사용자가 2026년 실시간을 조회 중일 때 백그라운드 자동 갱신)
@@ -207,7 +207,7 @@ async function loadMetadata() {
             const label = (y === 2026) ? `${y}년 (현재)` : `${y}년`;
             const opt1 = new Option(label, y);
             const opt2 = new Option(label, y);
-            if (y === 2007) opt1.selected = true;
+            if (y === 2026) opt1.selected = true;
             if (y === 2026) opt2.selected = true;
             startYearSel.add(opt1);
             endYearSel.add(opt2);

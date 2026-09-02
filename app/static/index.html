@@ -257,10 +257,10 @@
                     <span class="text-xs text-slate-300 font-semibold flex items-center gap-1 min-w-[95px]">
                         <i class="fa-solid fa-calendar text-red-400"></i> 연도 바로가기:
                     </span>
-                    <button onclick="setYearPreset(2026)" class="year-preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600 hover:border-emerald-400 transition flex items-center gap-1 shadow-sm" data-val="2026">
+                    <button onclick="setYearPreset(2026)" class="year-preset-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600 hover:border-emerald-400 transition flex items-center gap-1 shadow-sm" data-val="2026">
                         <i class="fa-solid fa-bolt text-amber-400 animate-pulse text-[11px]"></i> 2026년 실시간
                     </button>
-                    <button onclick="setYearPreset('all')" class="year-preset-btn active px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white border border-red-500 transition" data-val="all">전체 20년 (2007~2026)</button>
+                    <button onclick="setYearPreset('all')" class="year-preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="all">전체 20년 (2007~2026)</button>
                     <button onclick="setYearPreset('recent10')" class="year-preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent10">최근 10년</button>
                     <button onclick="setYearPreset('recent5')" class="year-preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent5">최근 5년</button>
                     <button onclick="setYearPreset('recent3')" class="year-preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 transition" data-val="recent3">최근 3년</button>
@@ -293,7 +293,7 @@
                 <div>
                     <label class="block text-[11px] font-medium text-slate-400 mb-1">시작 연도</label>
                     <select id="startYearSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-red-500 focus:outline-none">
-                        <option value="2007" selected>2007년</option>
+                        <option value="2007">2007년</option>
                         <option value="2008">2008년</option>
                         <option value="2009">2009년</option>
                         <option value="2010">2010년</option>
@@ -312,7 +312,7 @@
                         <option value="2023">2023년</option>
                         <option value="2024">2024년</option>
                         <option value="2025">2025년</option>
-                        <option value="2026">2026년 (현재)</option>
+                        <option value="2026" selected>2026년 (현재)</option>
                     </select>
                 </div>
 
@@ -717,6 +717,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v28"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v29"></script>
 </body>
 </html>
