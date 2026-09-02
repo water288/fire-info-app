@@ -193,6 +193,7 @@ async def search_fire_data(
     end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    period: Optional[str] = None,
     sido: Optional[str] = None,
     sigungu: Optional[str] = None,
     cause_category: Optional[str] = None,
@@ -242,7 +243,13 @@ async def search_fire_data(
         keyword=keyword
     )
     
-    total_count = real_stat["total_fires"]
+    # 🔒 일자/기간 필터(당일, 날짜 직접선택, 최근 3일, 최근 7일 등)가 적용된 경우 실제 필터링 건수 정확히 반영
+    has_date_filter = bool(start_date or end_date or period)
+    if has_date_filter:
+        total_count = len(filtered)
+    else:
+        total_count = real_stat["total_fires"]
+
     total_pages = max(1, (total_count + page_size - 1) // page_size)
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
@@ -277,7 +284,10 @@ async def search_fire_data(
 
         return cur_sido, cur_sgg, cur_emd
 
-    if filtered_len >= total_count or start_idx < filtered_len:
+    # 일자/기간 필터 시에는 filtered 리스트에서 즉시 정확한 항목 반환
+    if has_date_filter:
+        page_items = filtered[start_idx:end_idx]
+    elif filtered_len >= total_count or start_idx < filtered_len:
         # 1. filtered에 충분한 데이터가 있는 일반적인 경우 즉시 슬라이스
         page_items = filtered[start_idx:end_idx]
         
@@ -429,6 +439,7 @@ def get_fire_stats(
     end_year: Optional[int] = 2026,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    period: Optional[str] = None,
     sido: Optional[str] = None,
     sigungu: Optional[str] = None,
     cause_category: Optional[str] = None,
@@ -452,13 +463,6 @@ def get_fire_stats(
         keyword=keyword
     )
 
-    total_fires = real_stat["total_fires"]
-    total_deaths = real_stat["total_deaths"]
-    total_injuries = real_stat["total_injuries"]
-    total_casualties = real_stat["total_casualties"]
-    total_property_damage = real_stat["total_property_damage_cheonwon"]
-    yearly_trend = real_stat["yearly_trend"]
-
     # 세부 원인/장소 비중은 샘플 비율을 활용해 실제 통계 건수에 가중 반영
     all_data = get_current_active_records()
     filtered = filter_and_sort_records(
@@ -476,6 +480,23 @@ def get_fire_stats(
         min_damage=min_damage,
         has_deaths=has_deaths
     )
+
+    # 🔒 일자/기간 필터(당일, 날짜 직접선택, 최근 3일, 최근 7일 등)가 적용된 경우 실제 필터링 건수 및 통계치 정확히 반영
+    has_date_filter = bool(start_date or end_date or period)
+    if has_date_filter:
+        total_fires = len(filtered)
+        total_deaths = sum(r.deaths for r in filtered)
+        total_injuries = sum(r.injuries for r in filtered)
+        total_casualties = total_deaths + total_injuries
+        total_property_damage = sum(r.property_damage for r in filtered)
+    else:
+        total_fires = real_stat["total_fires"]
+        total_deaths = real_stat["total_deaths"]
+        total_injuries = real_stat["total_injuries"]
+        total_casualties = real_stat["total_casualties"]
+        total_property_damage = real_stat["total_property_damage_cheonwon"]
+
+    yearly_trend = real_stat["yearly_trend"]
 
     # 원인/지역/장소 비중 계산
     all_data = get_current_active_records()
