@@ -424,7 +424,30 @@ async def search_fire_data(
     else:
         year_scope_label = f"{start_year}~{end_year}년"
 
-    year_scope_total = real_stat["total_fires"]
+    # 🔒 1. 연도 범위 배지(첫 번째 배지): 어떤 지역/키워드를 선택하든 선택된 연도 범위의 전국 총 화재 건수 표출
+    year_scope_total = real_stat["national_total_fires"]
+
+    # 🔒 2. 시도 및 시군구 비율 및 분모 건수 수학적 정확성 100% 일치
+    if has_date_filter:
+        # 기간 필터(당일, 최근 1개월 등)가 적용된 경우: 해당 기간 실제 풀 기준으로 정확 집계
+        nat_total = len(source_data)
+        if sido and sido != "전체":
+            s_total = len([r for r in source_data if (sido in r.sido or r.sido in sido)])
+        else:
+            s_total = nat_total
+        s_pct = round((s_total / max(1, nat_total)) * 100, 1)
+        sgg_pct = round((total_count / max(1, s_total)) * 100, 1) if (sigungu and sigungu != "전체") else None
+        
+        resp_national_total = nat_total
+        resp_sido_total = s_total
+        resp_sido_pct = s_pct if (sido and sido != "전체") else None
+        resp_sigungu_pct = sgg_pct
+    else:
+        # 일반 연도 범위: 공식 10개년 통계 기반 집계
+        resp_national_total = real_stat["national_total_fires"]
+        resp_sido_total = real_stat["sido_total_fires"]
+        resp_sido_pct = real_stat["sido_percentage"]
+        resp_sigungu_pct = real_stat["sigungu_percentage"]
 
     # 오늘 당일 전국 실시간 총 발생 건수 계산 (어떤 기간을 보든 오늘의 실시간 총건수로 정확히 고정)
     now_dt = get_kst_now().replace(tzinfo=None)
@@ -440,10 +463,10 @@ async def search_fire_data(
         year_scope_total=year_scope_total,
         year_scope_label=year_scope_label,
         today_total=today_total,
-        national_total_fires=real_stat["national_total_fires"],
-        sido_total_fires=real_stat["sido_total_fires"],
-        sido_percentage=real_stat["sido_percentage"],
-        sigungu_percentage=real_stat["sigungu_percentage"],
+        national_total_fires=resp_national_total,
+        sido_total_fires=resp_sido_total,
+        sido_percentage=resp_sido_pct,
+        sigungu_percentage=resp_sigungu_pct,
         region_total_fires=real_stat["region_total_fires"],
         cause_percentage=real_stat["cause_percentage"],
         cause_category=cause_category,
