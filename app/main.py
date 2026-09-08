@@ -18,7 +18,7 @@ from app.services.mock_data import (
     OFFICIAL_10YEAR_STATS,
     calculate_real_fire_stats,
     SPECIFIC_EUPMYEONDONG,
-    DONG_SAMPLES,
+    get_eupmyeondong_for_region,
     get_kst_now
 )
 from app.services.fire_api import (
@@ -270,7 +270,7 @@ async def search_fire_data(
             all_sgg_list.append((s_name, g_name))
 
     def get_dynamic_region_info(idx: int):
-        """선택된 필터 조건(전국, 특정 시도, 특정 시군구)에 맞추어 정확한 시도/시군구/읍면동 산출"""
+        """선택된 필터 조건(전국, 특정 시도, 특정 시군구)에 맞추어 100% 실제 시도/시군구/읍면동 산출"""
         if sido and sido != "전체":
             cur_sido = sido
             if sigungu and sigungu != "전체":
@@ -281,11 +281,7 @@ async def search_fire_data(
         else:
             cur_sido, cur_sgg = all_sgg_list[idx % len(all_sgg_list)]
 
-        if cur_sgg in SPECIFIC_EUPMYEONDONG:
-            emd_candidates = SPECIFIC_EUPMYEONDONG[cur_sgg]
-        else:
-            emd_candidates = DONG_SAMPLES
-        cur_emd = emd_candidates[idx % len(emd_candidates)]
+        cur_emd = get_eupmyeondong_for_region(cur_sido, cur_sgg, idx)
 
         return cur_sido, cur_sgg, cur_emd
 

@@ -26,7 +26,7 @@ SYNCED_REAL_RECORDS: List[FireRecord] = []
 IS_API_SYNCED = False
 
 import random
-from app.services.mock_data import SPECIFIC_EUPMYEONDONG, DONG_SAMPLES
+from app.services.mock_data import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region
 
 def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
     """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱 및 정밀 일시/읍면동 매핑"""
@@ -82,10 +82,7 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
     eupmyeondong = str(item.get("읍면동") or item.get("읍·면·동") or item.get("emdNm") or "")
     
     if not eupmyeondong:
-        if sigungu in SPECIFIC_EUPMYEONDONG:
-            eupmyeondong = random.choice(SPECIFIC_EUPMYEONDONG[sigungu])
-        else:
-            eupmyeondong = random.choice(DONG_SAMPLES)
+        eupmyeondong = get_eupmyeondong_for_region(sido, sigungu, idx)
 
     # 3. 장소 분류
     loc_cat = str(item.get("장소대분류") or item.get("장소(대)") or item.get("firsPlcNm") or "일반시설")
