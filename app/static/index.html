@@ -267,22 +267,30 @@
                 </div>
 
                 <!-- (2) 조회 기간 / 일자 선택 행 (당일, 날짜 직접선택, 최근 3일, 최근 7일, 최근 1개월) -->
-                <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-800">
-                    <span class="text-xs text-orange-400 font-semibold flex items-center gap-1 min-w-[95px]">
-                        <i class="fa-solid fa-calendar-days text-orange-400"></i> 기간/일자 선택:
-                    </span>
-                    <button onclick="setPeriodFilter('TODAY')" id="btnPeriodToday" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-orange-500 hover:text-white transition flex items-center gap-1">
-                        <i class="fa-solid fa-fire text-amber-400 text-[11px]"></i> 당일 (오늘)
-                    </button>
-                    <div class="relative inline-flex items-center">
-                        <button onclick="triggerCustomDatePicker()" id="btnPeriodCustom" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-orange-500 hover:text-white transition flex items-center gap-1">
-                            <i class="fa-regular fa-calendar-check text-orange-400 text-xs"></i> <span id="customDateBtnLabel">📅 날짜 직접 선택</span>
+                <div class="flex items-center justify-between flex-wrap pt-2 border-t border-slate-800 gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-orange-400 font-semibold flex items-center gap-1 min-w-[95px]">
+                            <i class="fa-solid fa-calendar-days text-orange-400"></i> 기간/일자 선택:
+                        </span>
+                        <button onclick="setPeriodFilter('TODAY')" id="btnPeriodToday" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-orange-500 hover:text-white transition flex items-center gap-1">
+                            <i class="fa-solid fa-fire text-amber-400 text-[11px]"></i> 당일 (오늘)
                         </button>
-                        <input type="date" id="customDateInput" onchange="onCustomDatePicked(this.value)" class="absolute opacity-0 pointer-events-none w-0 h-0" max="2026-12-31" min="2007-01-01" />
+                        <div class="relative inline-flex items-center">
+                            <button onclick="triggerCustomDatePicker()" id="btnPeriodCustom" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-orange-500 hover:text-white transition flex items-center gap-1">
+                                <i class="fa-regular fa-calendar-check text-orange-400 text-xs"></i> <span id="customDateBtnLabel">📅 날짜 직접 선택</span>
+                            </button>
+                            <input type="date" id="customDateInput" onchange="onCustomDatePicked(this.value)" class="absolute opacity-0 pointer-events-none w-0 h-0" max="2026-09-02" min="2007-01-01" />
+                        </div>
+                        <button onclick="setPeriodFilter('3DAYS')" id="btnPeriod3Days" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 3일</button>
+                        <button onclick="setPeriodFilter('7DAYS')" id="btnPeriod7Days" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 7일</button>
+                        <button onclick="setPeriodFilter('1MONTH')" id="btnPeriod1Month" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 1개월</button>
                     </div>
-                    <button onclick="setPeriodFilter('3DAYS')" id="btnPeriod3Days" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 3일</button>
-                    <button onclick="setPeriodFilter('7DAYS')" id="btnPeriod7Days" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 7일</button>
-                    <button onclick="setPeriodFilter('1MONTH')" id="btnPeriod1Month" class="period-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition">최근 1개월</button>
+
+                    <!-- 실시간 검색 가능 최신 기준일 안내 배지 -->
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                        <span>소방청 최신 실시간 데이터: <strong class="text-white" id="latestDateDisplay">2026-09-02</strong>까지 검색 가능</span>
+                    </div>
                 </div>
             </div>
 
@@ -733,6 +741,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v41"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v42"></script>
 </body>
 </html>

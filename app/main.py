@@ -21,7 +21,8 @@ from app.services.fire_service import (
     add_real_fire_records,
     filter_and_sort_real_records,
     calculate_real_statistics,
-    query_real_fire_data
+    query_real_fire_data,
+    get_db_latest_date
 )
 from app.services.fire_api import (
     test_odcloud_connection,
@@ -51,8 +52,10 @@ app.add_middleware(
 def get_metadata():
     """대한민국 17개 시·도 및 250개 시·군·구, 발화원인, 발생장소 표준 메타데이터 반환"""
     years = list(range(2007, 2027))
+    latest_date = get_db_latest_date()
     return {
         "years": sorted(years, reverse=True),
+        "latest_date": latest_date,
         "regions": REGIONS,
         "causes": list(FIRE_CAUSES.keys()),
         "causes_detail": FIRE_CAUSES,
@@ -135,6 +138,7 @@ async def search_fire_data(
         year_scope_total=year_scope_total,
         year_scope_label=year_scope_label,
         today_total=today_total,
+        latest_date=get_db_latest_date(),
         national_total_fires=year_scope_total,
         sido_total_fires=sido_total,
         sido_percentage=s_pct if (sido and sido != "전체") else None,

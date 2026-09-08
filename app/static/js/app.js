@@ -239,6 +239,14 @@ async function loadMetadata() {
             locSel.add(new Option(loc, loc));
         });
 
+        if (data.latest_date) {
+            state.latestDate = data.latest_date;
+            const latestEl = document.getElementById('latestDateDisplay');
+            if (latestEl) latestEl.innerText = data.latest_date;
+            const customInput = document.getElementById('customDateInput');
+            if (customInput) customInput.max = data.latest_date;
+        }
+
     } catch (err) {
         console.error('메타데이터 로드 실패:', err);
     }
@@ -526,7 +534,15 @@ async function fetchTableData(page = 1) {
     const todayTotalEl = document.getElementById('todayTotalText');
     if (todayTotalEl) {
         const tTotal = (data.today_total !== undefined && data.today_total !== null) ? data.today_total : 0;
-        todayTotalEl.innerText = `오늘 당일: ${tTotal.toLocaleString()}건`;
+        const lDate = data.latest_date || '2026-09-02';
+        todayTotalEl.innerText = `오늘 당일 (${lDate}): ${tTotal.toLocaleString()}건`;
+    }
+
+    if (data.latest_date) {
+        const latestEl = document.getElementById('latestDateDisplay');
+        if (latestEl) latestEl.innerText = data.latest_date;
+        const customInput = document.getElementById('customDateInput');
+        if (customInput) customInput.max = data.latest_date;
     }
 
     const resultCountEl = document.getElementById('resultCountText');
