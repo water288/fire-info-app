@@ -262,18 +262,33 @@ def query_real_fire_data(
             rows = cur.fetchall()
             items = [row_to_fire_record(r) for r in rows]
 
-            # 3. 전체 연도/전체 건수
-            cur.execute("SELECT COUNT(*) FROM fire_records")
+            # 3. 선택된 연도 범위 총 건수
+            y_where = []
+            y_params = []
+            if start_year:
+                y_where.append("year >= ?")
+                y_params.append(start_year)
+            if end_year:
+                y_where.append("year <= ?")
+                y_params.append(end_year)
+            y_str = (" WHERE " + " AND ".join(y_where)) if y_where else ""
+            cur.execute(f"SELECT COUNT(*) FROM fire_records{y_str}", y_params)
             year_scope_total = cur.fetchone()[0]
 
-            # 4. 오늘 건수
+            # 4. 오늘(또는 최신일자) 발생 건수
             cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [today_str])
             today_total = cur.fetchone()[0]
+            if today_total == 0:
+                cur.execute("SELECT MAX(fire_date) FROM fire_records")
+                max_d = cur.fetchone()[0]
+                if max_d:
+                    cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [max_d])
+                    today_total = cur.fetchone()[0]
 
             # 5. 시도 건수
             sido_total = 0
             if sido and sido != "전체":
-                cur.execute("SELECT COUNT(*) FROM fire_records WHERE sido LIKE ?", [f"%{sido}%"])
+                cur.execute(f"SELECT COUNT(*) FROM fire_records{y_str} " + ("AND" if y_str else "WHERE") + " sido LIKE ?", y_params + [f"%{sido}%"])
                 sido_total = cur.fetchone()[0]
             else:
                 sido_total = year_scope_total
