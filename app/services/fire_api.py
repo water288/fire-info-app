@@ -25,8 +25,7 @@ ODCLOUD_BASE_URL = "https://api.odcloud.kr/api/15044003/v1/uddi:"
 SYNCED_REAL_RECORDS: List[FireRecord] = []
 IS_API_SYNCED = False
 
-import random
-from app.services.mock_data import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region
+from app.services.fire_service import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region, set_real_fire_records
 
 def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
     """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱 및 정밀 일시/읍면동 매핑"""
@@ -238,6 +237,7 @@ async def sync_all_odcloud_data(api_key: str, max_records_per_endpoint: int = 50
         # 기존 데이터를 지우고 소방청 순수 실제 데이터로만 전면 교체
         collected_records.sort(key=lambda x: x.fire_datetime, reverse=True)
         SYNCED_REAL_RECORDS = collected_records
+        set_real_fire_records(collected_records)
         IS_API_SYNCED = True
         return {
             "success": True,

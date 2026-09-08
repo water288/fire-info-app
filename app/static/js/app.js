@@ -1,3 +1,10 @@
+const getKstTodayStr = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const kst = new Date(utc + (9 * 3600000));
+    return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, '0')}-${String(kst.getDate()).padStart(2, '0')}`;
+};
+
 // 전역 상태 관리 객체
 const state = {
     metadata: null,
@@ -6,8 +13,8 @@ const state = {
         keyword: '',
         startYear: 2026,
         endYear: 2026,
-        startDate: '2026-09-03',
-        endDate: '2026-09-03',
+        startDate: getKstTodayStr(),
+        endDate: getKstTodayStr(),
         period: 'TODAY',
         sido: '',
         sigungu: '',
@@ -26,8 +33,7 @@ const state = {
         totalPages: 1
     },
     apiConfig: {
-        apiKey: localStorage.getItem('fire_api_key') || '',
-        mode: localStorage.getItem('fire_api_mode') || 'demo'
+        apiKey: localStorage.getItem('fire_api_key') || ''
     },
     currentItems: [],
     charts: {
@@ -472,11 +478,8 @@ function buildQueryParams(page = 1) {
     params.append('page', page);
     params.append('page_size', state.pagination.pageSize);
 
-    if (state.apiConfig.mode === 'live' && state.apiConfig.apiKey) {
-        params.append('mode', 'live');
+    if (state.apiConfig.apiKey) {
         params.append('api_key', state.apiConfig.apiKey);
-    } else {
-        params.append('mode', 'demo');
     }
 
     return params;
