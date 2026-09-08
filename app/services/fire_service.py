@@ -71,14 +71,30 @@ def get_eupmyeondong_for_region(sido: str, sigungu: str, seed_index: int = 0) ->
 # ==========================================
 # 순수 실제 데이터 저장소 (SQLite & Memory)
 # ==========================================
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "fire_records.db")
-if not os.path.exists(DB_PATH):
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "fire_records.db")
+GZ_PATH = os.path.join(BASE_DIR, "fire_records.db.gz")
+
+if not os.path.exists(DB_PATH) and not os.path.exists(GZ_PATH):
     DB_PATH = "fire_records.db"
+    GZ_PATH = "fire_records.db.gz"
+
+def ensure_sqlite_db():
+    """서버 시작 시 압축된 db.gz가 있으면 자동으로 복원"""
+    if not os.path.exists(DB_PATH) and os.path.exists(GZ_PATH):
+        import gzip
+        import shutil
+        print(f"Decompressing {GZ_PATH} to {DB_PATH}...")
+        with gzip.open(GZ_PATH, 'rb') as f_in:
+            with open(DB_PATH, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        print("SQLite database restored successfully.")
 
 _REAL_FIRE_STORE: List[FireRecord] = []
 
 def get_db_connection():
     """SQLite 데이터베이스 연결"""
+    ensure_sqlite_db()
     if os.path.exists(DB_PATH):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
