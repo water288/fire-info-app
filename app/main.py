@@ -20,7 +20,8 @@ from app.services.fire_service import (
     set_real_fire_records,
     add_real_fire_records,
     filter_and_sort_real_records,
-    calculate_real_statistics
+    calculate_real_statistics,
+    query_real_fire_data
 )
 from app.services.fire_api import (
     test_odcloud_connection,
@@ -88,9 +89,7 @@ async def search_fire_data(
     page_size: int = Query(20, ge=1, le=200)
 ):
     """소방청 공식 실제 화재 데이터 검색 (가짜 생성 일절 없음)"""
-    
-    # 1. 실제 데이터 저장소에서 필터링 및 정렬 수행
-    filtered = filter_and_sort_real_records(
+    items, total_count, year_scope_total, today_total, sido_total = query_real_fire_data(
         keyword=keyword,
         start_year=start_year,
         end_year=end_year,
@@ -105,18 +104,12 @@ async def search_fire_data(
         min_damage=min_damage,
         has_deaths=has_deaths,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size
     )
 
-    total_count = len(filtered)
     total_pages = max(1, (total_count + page_size - 1) // page_size)
-    start_idx = (page - 1) * page_size
-    end_idx = start_idx + page_size
-    page_items = filtered[start_idx:end_idx]
-
-    # 전체 소스 데이터 기준 통계 산출
-    all_real_records = get_all_real_records()
-    real_stat = calculate_real_statistics(all_real_records, sido=sido, sigungu=sigungu)
 
     # 연도 범위 라벨
     if start_year == 2026 and end_year == 2026:
@@ -130,35 +123,23 @@ async def search_fire_data(
     else:
         year_scope_label = "전체 기간"
 
-    # 오늘 당일 실제 건수
-    now_dt = get_kst_now().replace(tzinfo=None)
-    today_str = now_dt.strftime("%Y-%m-%d")
-    today_total = sum(1 for r in all_real_records if r.fire_date == today_str)
-
-    # 점유율 계산 (실제 데이터 기준)
-    nat_total = len(all_real_records)
-    if sido and sido != "전체":
-        s_total = sum(1 for r in all_real_records if (sido in r.sido or r.sido in sido))
-    else:
-        s_total = nat_total
-    
-    s_pct = round((s_total / max(1, nat_total)) * 100, 1) if nat_total > 0 else 0.0
-    sgg_pct = round((total_count / max(1, s_total)) * 100, 1) if (sigungu and sigungu != "전체" and s_total > 0) else None
+    s_pct = round((sido_total / max(1, year_scope_total)) * 100, 1) if year_scope_total > 0 else 0.0
+    sgg_pct = round((total_count / max(1, sido_total)) * 100, 1) if (sigungu and sigungu != "전체" and sido_total > 0) else None
 
     return SearchResponse(
         total_count=total_count,
         page=page,
         page_size=page_size,
         total_pages=total_pages,
-        items=page_items,
-        year_scope_total=nat_total,
+        items=items,
+        year_scope_total=year_scope_total,
         year_scope_label=year_scope_label,
         today_total=today_total,
-        national_total_fires=nat_total,
-        sido_total_fires=s_total,
+        national_total_fires=year_scope_total,
+        sido_total_fires=sido_total,
         sido_percentage=s_pct if (sido and sido != "전체") else None,
         sigungu_percentage=sgg_pct,
-        region_total_fires=s_total,
+        region_total_fires=sido_total,
         cause_percentage=None,
         cause_category=cause_category,
         location_percentage=None,
@@ -184,17 +165,15 @@ def get_fire_stats(
     has_deaths: Optional[bool] = None
 ):
     """현재 필터링 조건에 따른 소방청 실제 통계 요약 및 차트 데이터 산출"""
-    
-    # 1. 실제 조건에 맞는 레코드 필터링
-    filtered = filter_and_sort_real_records(
+    stats = calculate_real_statistics(
+        sido=sido,
+        sigungu=sigungu,
         keyword=keyword,
         start_year=start_year,
         end_year=end_year,
         start_date=start_date,
         end_date=end_date,
         period=period,
-        sido=sido,
-        sigungu=sigungu,
         cause_category=cause_category,
         location_category=location_category,
         min_casualties=min_casualties,
@@ -202,10 +181,8 @@ def get_fire_stats(
         has_deaths=has_deaths
     )
 
-    stats = calculate_real_statistics(filtered, sido=sido, sigungu=sigungu)
     total_cnt = stats["total_fires"]
 
-    # 세부 비중 계산
     cause_breakdown = [
         {"cause": item["cause"], "count": item["count"], "percentage": round((item["count"] / max(1, total_cnt)) * 100, 1)}
         for item in stats["cause_stats"]

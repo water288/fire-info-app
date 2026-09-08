@@ -520,19 +520,20 @@ async function fetchTableData(page = 1) {
     const yearScopeEl = document.getElementById('yearScopeText');
     if (yearScopeEl) {
         const yLabel = data.year_scope_label || '2026년 실시간';
-        const yTotal = data.year_scope_total || 25726;
+        const yTotal = (data.year_scope_total !== undefined && data.year_scope_total !== null) ? data.year_scope_total : 0;
         yearScopeEl.innerText = `${yLabel}: ${yTotal.toLocaleString()}건`;
     }
 
     const todayTotalEl = document.getElementById('todayTotalText');
     if (todayTotalEl) {
-        const tTotal = data.today_total || 141;
+        const tTotal = (data.today_total !== undefined && data.today_total !== null) ? data.today_total : 0;
         todayTotalEl.innerText = `오늘 당일: ${tTotal.toLocaleString()}건`;
     }
 
     const resultCountEl = document.getElementById('resultCountText');
     if (resultCountEl) {
-        resultCountEl.innerText = `검색조건 결과: ${data.total_count.toLocaleString()}건`;
+        const rCount = (data.total_count !== undefined && data.total_count !== null) ? data.total_count : 0;
+        resultCountEl.innerText = `검색조건 결과: ${rCount.toLocaleString()}건`;
     }
 
     // 필터 조건에 따른 상세 분석 배지 렌더링 (시·도, 시·군·구, 발화원인, 발생장소)
