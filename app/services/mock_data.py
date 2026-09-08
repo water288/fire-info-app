@@ -1348,15 +1348,19 @@ def get_fire_dataset(
     - 전체 연도 조회일 경우 아카이브 + 오늘 라이브 결합 반환
     """
     now_dt = get_kst_now().replace(tzinfo=None)
+    today_str = now_dt.strftime("%Y-%m-%d")
 
+    # 1. 당일(오늘) 모드
+    if period == 'TODAY' or (start_date == today_str and end_date == today_str):
+        return get_live_today_events(now_dt)
+
+    # 2. 특정 기간(최근 3일, 7일, 1개월, 사용자 지정 날짜) 모드
     if period in ['3DAYS', '7DAYS', '1MONTH', 'CUSTOM'] or (start_date and start_date != end_date):
         return generate_period_events(now_dt, period=period, start_date=start_date, end_date=end_date)
 
-    # 1. 전날까지의 별도 저장된 아카이브
+    # 3. 전체 연도 조회일 경우: 전날까지의 별도 저장된 아카이브 + 오늘 실시간 자료 결합 반환
     archive_data = get_historical_archive()
-    
-    # 2. 당일날(오늘 실시간) 자료만 가볍게 호출
     today_live_data = get_live_today_events(now_dt)
 
-    # 3. 당일 데이터(최신) + 전날까지의 아카이브 즉시 결합 (정렬 오버헤드 없이 0ms 반환)
     return today_live_data + archive_data
+
