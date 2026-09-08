@@ -146,6 +146,22 @@ def row_to_fire_record(row: Any) -> FireRecord:
         is_realtime=bool(row["is_realtime"])
     )
 
+def get_db_latest_date() -> str:
+    """데이터베이스 내 최신 화재 발생 일자 반환"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT MAX(fire_date) FROM fire_records")
+            row = cur.fetchone()
+            conn.close()
+            if row and row[0]:
+                return row[0]
+        except Exception:
+            if conn:
+                conn.close()
+    return get_kst_now().strftime("%Y-%m-%d")
+
 def query_real_fire_data(
     keyword: Optional[str] = None,
     start_year: Optional[int] = None,
@@ -168,22 +184,27 @@ def query_real_fire_data(
     """실제 데이터 조회: (items, total_count, year_scope_total, today_total, sido_total) 반환"""
     now_dt = get_kst_now().replace(tzinfo=None)
     today_str = now_dt.strftime("%Y-%m-%d")
+    latest_date_str = get_db_latest_date()
+    try:
+        ref_dt = datetime.strptime(latest_date_str, "%Y-%m-%d")
+    except:
+        ref_dt = now_dt
 
     calc_start_date = start_date
     calc_end_date = end_date
 
     if period == 'TODAY':
-        calc_start_date = today_str
-        calc_end_date = today_str
+        calc_start_date = latest_date_str
+        calc_end_date = latest_date_str
     elif period == '3DAYS':
-        calc_start_date = (now_dt - timedelta(days=2)).strftime("%Y-%m-%d")
-        calc_end_date = today_str
+        calc_start_date = (ref_dt - timedelta(days=2)).strftime("%Y-%m-%d")
+        calc_end_date = latest_date_str
     elif period == '7DAYS':
-        calc_start_date = (now_dt - timedelta(days=6)).strftime("%Y-%m-%d")
-        calc_end_date = today_str
+        calc_start_date = (ref_dt - timedelta(days=6)).strftime("%Y-%m-%d")
+        calc_end_date = latest_date_str
     elif period == '1MONTH':
-        calc_start_date = (now_dt - timedelta(days=29)).strftime("%Y-%m-%d")
-        calc_end_date = today_str
+        calc_start_date = (ref_dt - timedelta(days=29)).strftime("%Y-%m-%d")
+        calc_end_date = latest_date_str
 
     conn = get_db_connection()
     if conn:

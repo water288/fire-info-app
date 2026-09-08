@@ -94,11 +94,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // 기본 시작 상태: 당일 (오늘 실시간) 자동 활성화
-        setPeriodFilter('TODAY');
-    } catch (e) {
-        console.error('setPeriodFilter TODAY error:', e);
+        // 기본 시작 상태: 2026년 실시간 전체 실제 화재 목록 즉시 로드
         await refreshAllData();
+    } catch (e) {
+        console.error('Initial data load error:', e);
     }
 
     // 30초 주기 실시간 라이브 자동 동기화 (사용자가 2026년 실시간을 조회 중일 때 백그라운드 자동 갱신)
