@@ -221,16 +221,41 @@ def get_fire_stats(
     )
 
 
+@app.get("/api/download-excel")
+async def download_excel():
+    """2007~2026년 소방청 화재발생 데이터 전체 엑셀 다운로드"""
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    xlsx_path = os.path.join(base_dir, "korea_fire_data_2007_2026_826683.xlsx")
+    if not os.path.exists(xlsx_path):
+        xlsx_path = os.path.join(base_dir, "2026-08-31_소방청 화재발생 상세-korea_fire_data_2007_2026_(826683건).xlsx")
+    
+    if os.path.exists(xlsx_path):
+        return FileResponse(
+            path=xlsx_path,
+            filename="korea_fire_data_2007_2026_826683.xlsx",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        # 엑셀 원본이 없을 경우 최신 DB 기준 CSV 스트리밍 다운로드
+        return await export_csv(start_year=2007, end_year=2026)
+
+
 @app.get("/api/test-api-key")
-async def test_api_key_endpoint(api_key: str = Query(..., description="공공데이터포털 소방청 일반 인증키")):
-    """사용자가 입력한 공공데이터포털(data.go.kr) 소방청 인증키 진단"""
-    if not api_key:
+@app.post("/api/test-connection")
+async def test_api_key_endpoint(
+    api_key: Optional[str] = Query(None, description="공공데이터포털 소방청 일반 인증키"),
+    body: Optional[Dict[str, Any]] = None
+):
+    """사용자가 입력한 공공데이터포털(data.go.kr) 소방청 인증키 진단 (GET/POST 지원)"""
+    key = api_key or (body.get("api_key") if body else None)
+    if not key:
         raise HTTPException(status_code=400, detail="API 인증키를 입력해주세요.")
-    result = await test_odcloud_connection(api_key)
+    result = await test_odcloud_connection(key)
     return result
 
 
 @app.post("/api/sync-odcloud")
+@app.post("/api/sync-official-api")
 async def sync_odcloud_endpoint(
     api_key: str = Query(..., description="공공데이터포털 소방청 인증키"),
     per_page: int = Query(500, ge=10, le=1000)
@@ -243,6 +268,7 @@ async def sync_odcloud_endpoint(
 
 
 @app.get("/api/export/csv")
+@app.get("/api/export-csv")
 async def export_csv(
     keyword: Optional[str] = None,
     start_year: Optional[int] = None,

@@ -368,6 +368,98 @@ def filter_and_sort_real_records(
     sort_by: str = "fire_datetime",
     sort_order: str = "desc"
 ) -> List[FireRecord]:
+    if records is None:
+        conn = get_db_connection()
+        if conn:
+            try:
+                where_clauses = []
+                params = []
+                now_dt = get_kst_now().replace(tzinfo=None)
+                today_str = now_dt.strftime("%Y-%m-%d")
+
+                calc_start_date = start_date
+                calc_end_date = end_date
+
+                if period == 'TODAY':
+                    cur = conn.cursor()
+                    cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [today_str])
+                    if cur.fetchone()[0] > 0:
+                        calc_start_date = today_str
+                        calc_end_date = today_str
+                    else:
+                        cur.execute("SELECT MAX(fire_date) FROM fire_records")
+                        max_d = cur.fetchone()[0]
+                        if max_d:
+                            calc_start_date = max_d
+                            calc_end_date = max_d
+                elif period == '3DAYS':
+                    calc_start_date = (now_dt - timedelta(days=2)).strftime("%Y-%m-%d")
+                    calc_end_date = today_str
+                elif period == '7DAYS':
+                    calc_start_date = (now_dt - timedelta(days=6)).strftime("%Y-%m-%d")
+                    calc_end_date = today_str
+                elif period == '1MONTH':
+                    calc_start_date = (now_dt - timedelta(days=29)).strftime("%Y-%m-%d")
+                    calc_end_date = today_str
+
+                if start_year:
+                    where_clauses.append("year >= ?")
+                    params.append(start_year)
+                if end_year:
+                    where_clauses.append("year <= ?")
+                    params.append(end_year)
+                if calc_start_date:
+                    where_clauses.append("fire_date >= ?")
+                    params.append(calc_start_date)
+                if calc_end_date:
+                    where_clauses.append("fire_date <= ?")
+                    params.append(calc_end_date)
+                if sido and sido != "전체":
+                    where_clauses.append("sido LIKE ?")
+                    params.append(f"%{sido}%")
+                if sigungu and sigungu != "전체":
+                    where_clauses.append("sigungu LIKE ?")
+                    params.append(f"%{sigungu}%")
+                if cause_category and cause_category != "전체":
+                    where_clauses.append("cause_category LIKE ?")
+                    params.append(f"%{cause_category}%")
+                if location_category and location_category != "전체":
+                    where_clauses.append("location_category LIKE ?")
+                    params.append(f"%{location_category}%")
+                if has_deaths is True:
+                    where_clauses.append("deaths > 0")
+                if min_casualties is not None:
+                    where_clauses.append("casualties >= ?")
+                    params.append(min_casualties)
+                if min_damage is not None:
+                    where_clauses.append("property_damage >= ?")
+                    params.append(min_damage)
+                if keyword:
+                    where_clauses.append("(sido LIKE ? OR sigungu LIKE ? OR eupmyeondong LIKE ? OR location_category LIKE ? OR location_detail LIKE ? OR cause_category LIKE ? OR cause_detail LIKE ? OR summary LIKE ?)")
+                    kw_pat = f"%{keyword.strip()}%"
+                    params.extend([kw_pat] * 8)
+
+                where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+                allowed_sorts = {
+                    "fire_datetime": "fire_datetime",
+                    "casualties": "casualties",
+                    "deaths": "deaths",
+                    "injuries": "injuries",
+                    "property_damage": "property_damage",
+                    "suppression_minutes": "suppression_minutes"
+                }
+                sort_col = allowed_sorts.get(sort_by, "fire_datetime")
+                sort_dir = "DESC" if sort_order.lower() == "desc" else "ASC"
+
+                cur = conn.cursor()
+                cur.execute(f"SELECT * FROM fire_records{where_str} ORDER BY {sort_col} {sort_dir} LIMIT 50000", params)
+                rows = cur.fetchall()
+                conn.close()
+                return [row_to_fire_record(r) for r in rows]
+            except Exception:
+                if conn:
+                    conn.close()
+
     source = records if records is not None else get_all_real_records()
     now_dt = get_kst_now().replace(tzinfo=None)
     today_str = now_dt.strftime("%Y-%m-%d")

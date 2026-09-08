@@ -869,8 +869,14 @@ function changePageSize() {
 
 function resetFilters() {
     document.getElementById('keywordInput').value = '';
-    document.getElementById('startYearSelect').value = 2016;
-    document.getElementById('endYearSelect').value = 2025;
+    
+    const startSel = document.getElementById('startYearSelect');
+    const endSel = document.getElementById('endYearSelect');
+    ensureYearOption(startSel, 2026);
+    ensureYearOption(endSel, 2026);
+    startSel.value = "2026";
+    endSel.value = "2026";
+
     document.getElementById('sidoSelect').value = '';
     document.getElementById('sigunguSelect').innerHTML = '<option value="">전체 시·군·구</option>';
     document.getElementById('causeSelect').value = '';
@@ -878,11 +884,21 @@ function resetFilters() {
     document.getElementById('hasDeathsCheckbox').checked = false;
     document.getElementById('sortBySelect').value = 'fire_datetime';
     
+    state.filters.period = null;
+    state.filters.startDate = '';
+    state.filters.endDate = '';
+    state.filters.customDate = '';
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
+    });
+    const customLabel = document.getElementById('customDateBtnLabel');
+    if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+
     state.sort.sortBy = 'fire_datetime';
     state.sort.sortOrder = 'desc';
 
     document.querySelectorAll('.year-preset-btn').forEach(btn => {
-        if (btn.dataset.val === 'all') btn.classList.add('active');
+        if (btn.dataset.val === '2026') btn.classList.add('active');
         else btn.classList.remove('active');
     });
 
