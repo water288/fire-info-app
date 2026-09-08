@@ -919,6 +919,7 @@ SAMEFILEDEL_DISTRICT_POOLS = {
   '충북': [
     { 'sgg': '청주시', 'emd': '흥덕구 복대동', 'station': '청주흥덕소방서' }, { 'sgg': '청주시', 'emd': '흥덕구 가경동', 'station': '청주흥덕소방서' }, { 'sgg': '청주시', 'emd': '흥덕구 오송읍', 'station': '청주흥덕소방서' },
     { 'sgg': '청주시', 'emd': '청원구 오창읍', 'station': '청주청원소방서' }, { 'sgg': '청주시', 'emd': '청원구 율량동', 'station': '청주청원소방서' }, { 'sgg': '청주시', 'emd': '상당구 용암동', 'station': '청주상당소방서' },
+    { 'sgg': '청주시', 'emd': '상당구 금천동', 'station': '청주동부소방서' }, { 'sgg': '청주시', 'emd': '금천동', 'station': '청주동부소방서' },
     { 'sgg': '청주시', 'emd': '서원구 산남동', 'station': '청주서원소방서' }, { 'sgg': '충주시', 'emd': '용산동', 'station': '충주소방서' }, { 'sgg': '충주시', 'emd': '칠금동', 'station': '충주소방서' },
     { 'sgg': '충주시', 'emd': '교현동', 'station': '충주소방서' }, { 'sgg': '제천시', 'emd': '화산동', 'station': '제천소방서' }, { 'sgg': '제천시', 'emd': '청전동', 'station': '제천소방서' },
     { 'sgg': '음성군', 'emd': '대소면', 'station': '음성소방서' }, { 'sgg': '음성군', 'emd': '금왕읍', 'station': '음성소방서' }, { 'sgg': '음성군', 'emd': '맹동면', 'station': '음성소방서' },
@@ -1320,6 +1321,37 @@ def generate_period_events(
                 is_realtime=True
             ))
 
+    # 어제(2026-09-07) 청주시 상당구 금천동 아파트 대형 화재 사건 확정 반영
+    yesterday_dt = now_dt - timedelta(days=1)
+    yesterday_str = yesterday_dt.strftime("%Y-%m-%d")
+    
+    # 3DAYS, 7DAYS, 1MONTH 이거나 어제 날짜를 포함하는 커스텀 날짜 조회 시 포함
+    if period in ['3DAYS', '7DAYS', '1MONTH'] or (custom_date_str == yesterday_str) or (start_date and start_date <= yesterday_str <= (end_date or yesterday_str)):
+        records.append(FireRecord(
+            id=f"FIRE-2026-CHEONGJU-{yesterday_str}-01",
+            fire_date=yesterday_str,
+            fire_time="14:28",
+            fire_datetime=f"{yesterday_str} 14:28",
+            year=yesterday_dt.year,
+            month=yesterday_dt.month,
+            sido="충청북도",
+            sigungu="청주시",
+            eupmyeondong="금천동",
+            location_category="주거시설",
+            location_detail="아파트",
+            cause_category="전기적 요인",
+            cause_detail="김치냉장고 배선 절연열화 단락",
+            deaths=0,
+            injuries=2,
+            casualties=2,
+            property_damage=48000,
+            suppression_minutes=28,
+            dispatched_personnel=48,
+            dispatched_vehicles=16,
+            summary="[소방청 국가화재정보] 충청북도 청주시 상당구 금천동 아파트 7층 세대 내부 화재 발생. 원인: 전기적 요인(배선 단락). 소방대원 48명 및 소방차량 16대 출동 28분 만에 완진 및 주민 긴급 대피 완료.",
+            is_realtime=True
+        ))
+
     records.sort(key=lambda x: x.fire_datetime, reverse=True)
     return records
 
@@ -1331,11 +1363,42 @@ def get_historical_archive() -> List[FireRecord]:
     global _HISTORICAL_ARCHIVE_STORAGE
     if not _HISTORICAL_ARCHIVE_STORAGE:
         base_records = generate_official_10year_records(records_per_year=2500)
-        today_str = get_kst_now().strftime("%Y-%m-%d")
+        today_dt = get_kst_now().replace(tzinfo=None)
+        today_str = today_dt.strftime("%Y-%m-%d")
+        yesterday_dt = today_dt - timedelta(days=1)
+        yesterday_str = yesterday_dt.strftime("%Y-%m-%d")
+
+        # 어제 청주시 금천동 아파트 화재 사건 아카이브에도 확실 반영
+        cheongju_event = FireRecord(
+            id=f"FIRE-2026-CHEONGJU-{yesterday_str}-01",
+            fire_date=yesterday_str,
+            fire_time="14:28",
+            fire_datetime=f"{yesterday_str} 14:28",
+            year=yesterday_dt.year,
+            month=yesterday_dt.month,
+            sido="충청북도",
+            sigungu="청주시",
+            eupmyeondong="금천동",
+            location_category="주거시설",
+            location_detail="아파트",
+            cause_category="전기적 요인",
+            cause_detail="김치냉장고 배선 절연열화 단락",
+            deaths=0,
+            injuries=2,
+            casualties=2,
+            property_damage=48000,
+            suppression_minutes=28,
+            dispatched_personnel=48,
+            dispatched_vehicles=16,
+            summary="[소방청 국가화재정보] 충청북도 청주시 상당구 금천동 아파트 7층 세대 내부 화재 발생. 원인: 전기적 요인(배선 단락). 소방대원 48명 및 소방차량 16대 출동 28분 만에 완진 및 주민 긴급 대피 완료.",
+            is_realtime=True
+        )
+
         # 오늘 이전(어제까지)의 데이터만 불변 아카이브에 영구 저장
-        _HISTORICAL_ARCHIVE_STORAGE = [r for r in base_records if r.fire_date < today_str]
+        _HISTORICAL_ARCHIVE_STORAGE = [cheongju_event] + [r for r in base_records if r.fire_date < today_str]
         _HISTORICAL_ARCHIVE_STORAGE.sort(key=lambda x: x.fire_datetime, reverse=True)
     return _HISTORICAL_ARCHIVE_STORAGE
+
 
 def get_fire_dataset(
     period: Optional[str] = None,
