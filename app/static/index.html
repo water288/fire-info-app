@@ -35,6 +35,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet Map CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Custom Style -->
     <link rel="stylesheet" href="/style.css">
 </head>
@@ -53,7 +56,7 @@
                             소방청 화재 통계 포털
                             <span class="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800/60 font-medium">2007~2026</span>
                         </h1>
-                        <p class="text-[10px] sm:text-xs text-slate-400">화재발생 검색 · 다차원 정렬 · 통계 분석</p>
+                        <p class="text-[10px] sm:text-xs text-slate-400">화재발생 검색 · 다차원 정렬 · 통계 분석 · 실시간 관제</p>
                     </div>
                 </div>
 
@@ -87,7 +90,7 @@
                         <i class="fa-solid fa-arrows-rotate"></i>
                         <span>소방청 API 동기화</span>
                     </button>
-                    <a href="/api/download-excel" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-700/20 transition" title="2007~2026년 전체 826,683건 엑셀(.xlsx) 파일 다운로드">
+                    <a href="/api/download-excel" class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white shadow-md shadow-emerald-700/20 transition" title="2007~2026년 전체 826,709건 엑셀(.xlsx) 파일 다운로드">
                         <i class="fa-solid fa-file-excel"></i>
                         <span>전체 엑셀(82.6만건)</span>
                     </a>
@@ -100,8 +103,56 @@
         </div>
     </header>
 
+    <!-- 실시간 속보 롤링 배너 (5초 간격 & 날짜/시간 완벽 표시 & 마우스 오버 정지) -->
+    <div class="ticker-container px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between border-b border-red-900/40">
+        <div class="max-w-7xl mx-auto w-full flex items-center gap-3 overflow-hidden">
+            <div class="ticker-badge flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
+                <span>실시간 속보</span>
+            </div>
+            <div id="tickerContent" class="ticker-content flex-1 text-xs text-slate-200">
+                <span class="text-slate-400">속보 데이터를 불러오는 중입니다...</span>
+            </div>
+            <div class="hidden sm:flex items-center gap-1 shrink-0 text-slate-400">
+                <button onclick="prevTickerItem()" class="px-1.5 py-0.5 hover:text-white rounded bg-slate-800/80 hover:bg-slate-700 transition" title="이전 속보"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                <button onclick="toggleTickerPlay()" id="btnTickerPlay" class="px-1.5 py-0.5 hover:text-white rounded bg-slate-800/80 hover:bg-slate-700 transition" title="일시정지/재생"><i class="fa-solid fa-pause text-[10px]"></i></button>
+                <button onclick="nextTickerItem()" class="px-1.5 py-0.5 hover:text-white rounded bg-slate-800/80 hover:bg-slate-700 transition" title="다음 속보"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+            </div>
+        </div>
+    </div>
+
     <!-- 메인 컨테이너 -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6">
+
+        <!-- 전국 실시간 화재 관제 지도 (Clean Dark Map Tiles - 워터마크 없음) -->
+        <section class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 sm:p-5 backdrop-blur-sm space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            전국 화재 발생 관제 지도
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-semibold">🔒 100% 공식 실데이터</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-400">소방청 및 시·도 소방본부 공식 팩트 검증 사건 위치 표출</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-950/60 border border-red-800/60 text-red-300 text-[11px]">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> 🔒 소방본부 팩트 공식검증
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-[11px]">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span> 📡 공공데이터포털 실데이터
+                    </span>
+                    <button onclick="resetMapView()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1">
+                        <i class="fa-solid fa-crosshairs text-xs"></i><span>전국 중심</span>
+                    </button>
+                </div>
+            </div>
+            <div id="fireMap" class="shadow-inner border border-slate-800"></div>
+        </section>
 
         <!-- 1. 통계 KPI 요약 카드 그리드 -->
         <section class="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -289,7 +340,7 @@
                     <!-- 실시간 검색 가능 최신 기준일 안내 배지 -->
                     <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold">
                         <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                        <span>소방청 최신 실시간 데이터: <strong class="text-white" id="latestDateDisplay">2026-09-02</strong>까지 검색 가능</span>
+                        <span>소방청 최신 실시간 데이터: <strong class="text-white" id="latestDateDisplay">확인 중...</strong>까지 검색 가능</span>
                     </div>
                 </div>
             </div>
@@ -741,6 +792,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v42"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v43"></script>
 </body>
 </html>

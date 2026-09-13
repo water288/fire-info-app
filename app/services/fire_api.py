@@ -25,7 +25,7 @@ ODCLOUD_BASE_URL = "https://api.odcloud.kr/api/15044003/v1/uddi:"
 SYNCED_REAL_RECORDS: List[FireRecord] = []
 IS_API_SYNCED = False
 
-from app.services.fire_service import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region, set_real_fire_records
+from app.services.fire_service import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region, set_real_fire_records, REGION_COORDINATES, generate_dedup_key, add_real_fire_records
 
 def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
     """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱 및 정밀 일시/읍면동 매핑"""
@@ -107,6 +107,15 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
 
     record_id = f"ODCLOUD-{y}-{idx+1}"
 
+    # 좌표 추출
+    lat_val, lng_val = 36.5, 127.5
+    for k, coords in REGION_COORDINATES.items():
+        if k in sido or sido in k:
+            lat_val, lng_val = coords
+            break
+
+    dedup_key = f"{fire_date}_{sido}_{fire_time}_{cause_cat}_{loc_cat}"
+
     summary = f"[소방청 국가화재정보] {sido} {sigungu} {loc_cat}({loc_det}) 화재 발생. 발화원인: {cause_cat}({cause_det}), 인명피해 사망 {deaths}명, 부상 {injuries}명, 재산피해 {damage:,}천원."
 
     return FireRecord(
@@ -130,7 +139,14 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
         suppression_minutes=30,
         dispatched_personnel=20,
         dispatched_vehicles=5,
-        summary=summary
+        summary=summary,
+        lat=lat_val,
+        lng=lng_val,
+        source="소방청 공공데이터포털",
+        status="EXTINGUISHED",
+        status_text="완진",
+        is_verified=False,
+        dedup_key=dedup_key
     )
 
 

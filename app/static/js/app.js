@@ -67,6 +67,16 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
     return fetch(url, options);
 }
 
+// Ticker 전역 상태
+let tickerItems = [];
+let tickerIndex = 0;
+let tickerTimer = null;
+let tickerPlaying = true;
+
+// Leaflet 지도 전역 상태
+let fireMapInstance = null;
+let mapMarkersLayer = null;
+
 // DOM 로드 완료 후 초기화
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -94,6 +104,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
+        await initTicker();
+    } catch (e) {
+        console.error('initTicker error:', e);
+    }
+
+    try {
+        initFireMap();
+        await loadMapMarkers();
+    } catch (e) {
+        console.error('initFireMap error:', e);
+    }
+
+    try {
         // 기본 시작 상태: 2026년 실시간 전체 실제 화재 목록 즉시 로드
         await refreshAllData();
     } catch (e) {
@@ -107,12 +130,180 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (endYearVal === 2026 && state.pagination.page === 1) {
             try {
                 await fetchTableData(1);
+                await loadMapMarkers();
             } catch (err) {
                 console.warn('실시간 자동 동기화 대기 중:', err);
             }
         }
     }, 30000);
 });
+
+// ==========================================
+// 1. 실시간 속보 배너 (Rolling Ticker Banner)
+// ==========================================
+async function initTicker() {
+    try {
+        const res = await fetchWithRetry('/api/breaking-news');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+                tickerItems = data.items;
+                renderCurrentTickerItem();
+                startTickerTimer();
+            }
+        }
+    } catch (e) {
+        console.warn('속보 데이터 로드 실패:', e);
+    }
+}
+
+function renderCurrentTickerItem() {
+    const container = document.getElementById('tickerContent');
+    if (!container || tickerItems.length === 0) return;
+    const item = tickerItems[tickerIndex % tickerItems.length];
+    
+    const verifiedBadge = item.is_verified 
+        ? `<span class="ticker-verified">🔒 공식검증</span>` 
+        : `<span class="px-1.5 py-0.5 bg-slate-800 text-slate-400 border border-slate-700 rounded text-[10px] mr-1.5">📡 공공데이터</span>`;
+
+    container.innerHTML = `
+        <div class="ticker-item flex items-center cursor-pointer hover:text-white" onclick="openDetailModal('${item.id}')">
+            ${verifiedBadge}
+            <span class="ticker-time">[${item.datetime}]</span>
+            <span class="ticker-loc">[${item.region}]</span>
+            <span class="font-medium mr-2">${item.location}</span>
+            <span class="text-amber-400 text-[11px] mr-2">진압: ${item.status || '완진'}</span>
+            <span class="text-slate-400 text-[11px]">[원인: ${item.cause}]</span>
+        </div>
+    `;
+}
+
+function startTickerTimer() {
+    if (tickerTimer) clearInterval(tickerTimer);
+    tickerTimer = setInterval(() => {
+        if (tickerPlaying && tickerItems.length > 0) {
+            tickerIndex = (tickerIndex + 1) % tickerItems.length;
+            renderCurrentTickerItem();
+        }
+    }, 5000);
+}
+
+function nextTickerItem() {
+    if (tickerItems.length > 0) {
+        tickerIndex = (tickerIndex + 1) % tickerItems.length;
+        renderCurrentTickerItem();
+    }
+}
+
+function prevTickerItem() {
+    if (tickerItems.length > 0) {
+        tickerIndex = (tickerIndex - 1 + tickerItems.length) % tickerItems.length;
+        renderCurrentTickerItem();
+    }
+}
+
+function toggleTickerPlay() {
+    tickerPlaying = !tickerPlaying;
+    const btn = document.getElementById('btnTickerPlay');
+    if (btn) {
+        btn.innerHTML = tickerPlaying ? '<i class="fa-solid fa-pause text-[10px]"></i>' : '<i class="fa-solid fa-play text-[10px]"></i>';
+    }
+}
+
+// ==========================================
+// 2. 전국 화재 관제 지도 (Interactive Leaflet Map)
+// ==========================================
+function initFireMap() {
+    const mapContainer = document.getElementById('fireMap');
+    if (!mapContainer || typeof L === 'undefined') return;
+    if (fireMapInstance) return;
+
+    // 대한민국 중심 좌표 [36.3, 127.8]
+    fireMapInstance = L.map('fireMap', {
+        center: [36.3, 127.8],
+        zoom: 7,
+        minZoom: 6,
+        maxZoom: 18,
+        zoomControl: true,
+        attributionControl: false
+    });
+
+    // 워터마크 없는 깔끔한 CartoDB Dark/Voyager 타일
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+    }).addTo(fireMapInstance);
+
+    mapMarkersLayer = L.layerGroup().addTo(fireMapInstance);
+}
+
+async function loadMapMarkers() {
+    if (!fireMapInstance || typeof L === 'undefined') return;
+    try {
+        const res = await fetchWithRetry('/api/map-points');
+        if (!res.ok) return;
+        const data = await res.json();
+        const markers = data.markers || [];
+
+        if (mapMarkersLayer) {
+            mapMarkersLayer.clearLayers();
+        }
+
+        markers.forEach(item => {
+            const lat = item.lat || 36.5;
+            const lng = item.lng || 127.5;
+
+            const isVerified = Boolean(item.is_verified);
+            const iconHtml = `
+                <div class="map-fire-marker ${isVerified ? 'verified' : 'standard'}">
+                    <i class="fa-solid fa-fire text-xs ${isVerified ? 'text-amber-200 animate-pulse' : 'text-white'}"></i>
+                </div>
+            `;
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+
+            const marker = L.marker([lat, lng], { icon: customIcon });
+
+            const badgeHtml = isVerified 
+                ? `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-[10px] font-bold">🔒 소방본부 팩트 공식검증</span>`
+                : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px]">📡 소방청 공공데이터</span>`;
+
+            const popupHtml = `
+                <div class="space-y-1.5 min-w-[210px]">
+                    <div class="flex items-center justify-between pb-1 border-b border-slate-700">
+                        ${badgeHtml}
+                        <span class="text-slate-400 text-[11px] font-mono">${item.fire_date}</span>
+                    </div>
+                    <div class="font-bold text-white text-xs mt-1">[${item.sido} ${item.sigungu}] ${item.location_detail || item.location_category}</div>
+                    <div class="text-[11px] text-slate-300">발생일시: <span class="text-amber-400 font-medium">${item.fire_datetime}</span></div>
+                    <div class="text-[11px] text-slate-300">발화원인: <span class="text-red-400">${item.cause_category}</span> (${item.cause_detail})</div>
+                    <div class="text-[11px] text-slate-300">인명피해: <span class="${item.deaths > 0 ? 'text-rose-400 font-bold' : (item.injuries > 0 ? 'text-amber-400' : 'text-slate-400')}">사망 ${item.deaths}명 / 부상 ${item.injuries}명</span></div>
+                    <div class="text-[11px] text-slate-300">진압상태: <span class="text-emerald-400 font-semibold">${item.status_text || '완진'}</span></div>
+                    <button onclick="openDetailModal('${item.id}')" class="w-full mt-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[11px] font-semibold transition">
+                        상세 정보 보기
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupHtml);
+            mapMarkersLayer.addLayer(marker);
+        });
+    } catch (e) {
+        console.warn('지도 마커 로드 오류:', e);
+    }
+}
+
+function resetMapView() {
+    if (fireMapInstance) {
+        fireMapInstance.setView([36.3, 127.8], 7);
+    }
+}
 
 // [모드 전환] PC 모드 vs 스마트폰 모드
 function initViewMode() {
@@ -240,16 +431,24 @@ async function loadMetadata() {
         });
 
         if (data.latest_date) {
-            state.latestDate = data.latest_date;
-            const latestEl = document.getElementById('latestDateDisplay');
-            if (latestEl) latestEl.innerText = data.latest_date;
-            const customInput = document.getElementById('customDateInput');
-            if (customInput) customInput.max = data.latest_date;
+            updateLatestDateUI(data.latest_date);
         }
 
     } catch (err) {
         console.error('메타데이터 로드 실패:', err);
     }
+}
+
+// 🔒 최신 검색 가능 일자(latestDate) UI 동적 갱신 헬퍼
+function updateLatestDateUI(latestDate) {
+    if (!latestDate) return;
+    state.latestDate = latestDate;
+    
+    const latestEl = document.getElementById('latestDateDisplay');
+    if (latestEl) latestEl.innerText = latestDate;
+    
+    const customInput = document.getElementById('customDateInput');
+    if (customInput) customInput.max = latestDate;
 }
 
 // 3. 필터 이벤트 리스너 등록
@@ -339,11 +538,10 @@ function setPeriodFilter(periodId, customDateVal = null) {
         btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
     });
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
+    // 💡 최신 데이터베이스 검색 가능 기준일(state.latestDate)을 기점으로 계산 (동적 갱신)
+    const baseDateStr = state.latestDate || getKstTodayStr();
+    const parts = baseDateStr.split('-');
+    const baseDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
     const formatDate = (d) => {
         const y = d.getFullYear();
@@ -358,16 +556,16 @@ function setPeriodFilter(periodId, customDateVal = null) {
     if (periodId === 'TODAY') {
         const btn = document.getElementById('btnPeriodToday');
         if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
-        state.filters.startDate = todayStr;
-        state.filters.endDate = todayStr;
-        startSel.value = String(yyyy);
-        endSel.value = String(yyyy);
+        state.filters.startDate = baseDateStr;
+        state.filters.endDate = baseDateStr;
+        startSel.value = String(baseDate.getFullYear());
+        endSel.value = String(baseDate.getFullYear());
         const customLabel = document.getElementById('customDateBtnLabel');
         if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
     } else if (periodId === 'CUSTOM') {
         const btn = document.getElementById('btnPeriodCustom');
         if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
-        const chosen = customDateVal || state.filters.customDate || todayStr;
+        const chosen = customDateVal || state.filters.customDate || baseDateStr;
         state.filters.startDate = chosen;
         state.filters.endDate = chosen;
         const chosenYear = chosen.split('-')[0];
@@ -378,34 +576,34 @@ function setPeriodFilter(periodId, customDateVal = null) {
     } else if (periodId === '3DAYS') {
         const btn = document.getElementById('btnPeriod3Days');
         if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
-        const d3 = new Date(today);
+        const d3 = new Date(baseDate);
         d3.setDate(d3.getDate() - 2);
         state.filters.startDate = formatDate(d3);
-        state.filters.endDate = todayStr;
+        state.filters.endDate = baseDateStr;
         startSel.value = String(d3.getFullYear());
-        endSel.value = String(yyyy);
+        endSel.value = String(baseDate.getFullYear());
         const customLabel = document.getElementById('customDateBtnLabel');
         if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
     } else if (periodId === '7DAYS') {
         const btn = document.getElementById('btnPeriod7Days');
         if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
-        const d7 = new Date(today);
+        const d7 = new Date(baseDate);
         d7.setDate(d7.getDate() - 6);
         state.filters.startDate = formatDate(d7);
-        state.filters.endDate = todayStr;
+        state.filters.endDate = baseDateStr;
         startSel.value = String(d7.getFullYear());
-        endSel.value = String(yyyy);
+        endSel.value = String(baseDate.getFullYear());
         const customLabel = document.getElementById('customDateBtnLabel');
         if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
     } else if (periodId === '1MONTH') {
         const btn = document.getElementById('btnPeriod1Month');
         if (btn) btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 text-white border border-orange-500 shadow-sm transition flex items-center gap-1';
-        const d30 = new Date(today);
+        const d30 = new Date(baseDate);
         d30.setDate(d30.getDate() - 29);
         state.filters.startDate = formatDate(d30);
-        state.filters.endDate = todayStr;
+        state.filters.endDate = baseDateStr;
         startSel.value = String(d30.getFullYear());
-        endSel.value = String(yyyy);
+        endSel.value = String(baseDate.getFullYear());
         const customLabel = document.getElementById('customDateBtnLabel');
         if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
     }
@@ -534,15 +732,12 @@ async function fetchTableData(page = 1) {
     const todayTotalEl = document.getElementById('todayTotalText');
     if (todayTotalEl) {
         const tTotal = (data.today_total !== undefined && data.today_total !== null) ? data.today_total : 0;
-        const lDate = data.latest_date || '2026-09-02';
+        const lDate = data.latest_date || state.latestDate || getKstTodayStr();
         todayTotalEl.innerText = `오늘 당일 (${lDate}): ${tTotal.toLocaleString()}건`;
     }
 
     if (data.latest_date) {
-        const latestEl = document.getElementById('latestDateDisplay');
-        if (latestEl) latestEl.innerText = data.latest_date;
-        const customInput = document.getElementById('customDateInput');
-        if (customInput) customInput.max = data.latest_date;
+        updateLatestDateUI(data.latest_date);
     }
 
     const resultCountEl = document.getElementById('resultCountText');
@@ -668,8 +863,15 @@ function renderTable(items) {
             formattedDamage = `${Math.round(damageWon / 10000).toLocaleString()}만원`;
         }
 
+        const isVerified = Boolean(item.is_verified);
         const isRt = item.is_realtime || item.year === 2026;
-        const rtBadge = isRt ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[9px] animate-pulse"></i>실시간</span>` : '';
+        
+        let rtBadge = '';
+        if (isVerified) {
+            rtBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 mr-1 inline-flex items-center gap-0.5" title="${item.source || '소방본부 공식검증'}"><i class="fa-solid fa-shield-halved text-[9px] text-emerald-400"></i>공식검증</span>`;
+        } else if (isRt) {
+            rtBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[9px] animate-pulse"></i>실시간</span>`;
+        }
 
         tr.innerHTML = `
             <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${rtBadge}${item.id}</td>
@@ -744,8 +946,14 @@ function renderMobileCards(items) {
             formattedDamage = `${Math.round(damageWon / 10000).toLocaleString()}만원`;
         }
 
+        const isVerified = Boolean(item.is_verified);
         const isRt = item.is_realtime || item.year === 2026;
-        const rtBadge = isRt ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[8px] animate-pulse"></i>실시간</span>` : '';
+        let rtBadge = '';
+        if (isVerified) {
+            rtBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-shield-halved text-[8px] text-emerald-400"></i>공식검증</span>`;
+        } else if (isRt) {
+            rtBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-950/90 text-rose-300 border border-rose-600/80 mr-1 inline-flex items-center gap-0.5"><i class="fa-solid fa-bolt text-amber-400 text-[8px] animate-pulse"></i>실시간</span>`;
+        }
 
         card.innerHTML = `
             <div class="flex items-center justify-between text-xs">
@@ -1179,24 +1387,38 @@ function renderLocationDonutChart(locData) {
 
 // 12. 상세 모달 열기/닫기
 function openDetailModal(id) {
-    const item = state.currentItems.find(x => x.id === id);
+    let item = state.currentItems.find(x => x.id === id);
+    if (!item) {
+        item = tickerItems.find(x => x.id === id);
+    }
     if (!item) return;
 
-    document.getElementById('modalTitle').innerText = `[${item.sido} ${item.sigungu}] ${item.location_category} 화재 보고`;
-    document.getElementById('modalSubTitle').innerText = `사건번호: ${item.id}`;
-    document.getElementById('modalDatetime').innerText = item.fire_datetime;
-    document.getElementById('modalLocation').innerText = `${item.sido} ${item.sigungu} ${item.eupmyeondong}`;
-    document.getElementById('modalPlace').innerText = `${item.location_category} > ${item.location_detail}`;
-    document.getElementById('modalCause').innerText = `${item.cause_category} (${item.cause_detail})`;
-    document.getElementById('modalSuppression').innerText = `${item.suppression_minutes}분 소요`;
-    document.getElementById('modalDispatch').innerText = `인력 ${item.dispatched_personnel}명 / 차량 ${item.dispatched_vehicles}대`;
+    const isVerified = Boolean(item.is_verified);
+    const sido = item.sido || item.region || '';
+    const sgg = item.sigungu || '';
+    const locCat = item.location_category || item.placeCategory || '화재 사건';
 
-    document.getElementById('modalDeaths').innerText = `${item.deaths}명`;
-    document.getElementById('modalInjuries').innerText = `${item.injuries}명`;
+    document.getElementById('modalTitle').innerText = `[${sido} ${sgg}] ${locCat} 보고`;
 
-    const won = item.property_damage * 1000;
-    document.getElementById('modalDamage').innerText = `약 ${won.toLocaleString()}원`;
-    document.getElementById('modalSummary').innerText = item.summary || '상세 개요가 등록되지 않았습니다.';
+    const badgeSpan = isVerified 
+        ? `<span class="ml-2 px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-[10px] font-bold">🔒 소방본부 팩트 공식검증</span>` 
+        : `<span class="ml-2 px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">📡 소방청 공공데이터포털</span>`;
+
+    document.getElementById('modalSubTitle').innerHTML = `사건번호: ${item.id} ${badgeSpan}`;
+    document.getElementById('modalDatetime').innerText = item.fire_datetime || item.datetime || '';
+    document.getElementById('modalLocation').innerText = `${sido} ${sgg} ${item.eupmyeondong || ''}`;
+    document.getElementById('modalPlace').innerText = `${locCat} > ${item.location_detail || item.occurPlace || ''}`;
+    document.getElementById('modalCause').innerText = `${item.cause_category || item.cause || ''} (${item.cause_detail || item.fireCause || ''})`;
+    document.getElementById('modalSuppression').innerText = `${item.suppression_minutes || 30}분 소요 (${item.status_text || item.status || '완진'})`;
+    document.getElementById('modalDispatch').innerText = `인력 ${item.dispatched_personnel || 20}명 / 차량 ${item.dispatched_vehicles || 5}대`;
+
+    document.getElementById('modalDeaths').innerText = `${item.deaths || 0}명`;
+    document.getElementById('modalInjuries').innerText = `${item.injuries || 0}명`;
+
+    const dmg = item.property_damage || 0;
+    const won = dmg > 1000 ? dmg * 1000 : dmg * 10000000;
+    document.getElementById('modalDamage').innerText = won > 0 ? `약 ${won.toLocaleString()}원` : (item.damageAmount || '-');
+    document.getElementById('modalSummary').innerText = item.summary || item.description || '상세 개요가 등록되지 않았습니다.';
 
     document.getElementById('detailModal').classList.remove('hidden');
 }

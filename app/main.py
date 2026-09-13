@@ -22,7 +22,9 @@ from app.services.fire_service import (
     filter_and_sort_real_records,
     calculate_real_statistics,
     query_real_fire_data,
-    get_db_latest_date
+    get_db_latest_date,
+    get_breaking_news_items,
+    get_map_markers_data
 )
 from app.services.fire_api import (
     test_odcloud_connection,
@@ -68,6 +70,28 @@ def get_metadata():
             {"value": "injuries", "label": "부상자 많은순"},
             {"value": "property_damage", "label": "재산피해액순"}
         ]
+    }
+
+
+@app.get("/api/breaking-news")
+def get_breaking_news():
+    """실시간 속보 배너 데이터 (날짜·시간·장소·원인·진압상태 포함)"""
+    items = get_breaking_news_items(limit=25)
+    return {
+        "count": len(items),
+        "latest_date": get_db_latest_date(),
+        "items": items
+    }
+
+
+@app.get("/api/map-points")
+def get_map_points():
+    """전국 화재 발생 현황 지도 표출용 데이터 반환"""
+    markers = get_map_markers_data(limit=150)
+    return {
+        "count": len(markers),
+        "latest_date": get_db_latest_date(),
+        "markers": markers
     }
 
 
@@ -229,19 +253,19 @@ def get_fire_stats(
 async def download_excel():
     """2007~2026년 소방청 화재발생 데이터 전체 엑셀 다운로드"""
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    xlsx_path = os.path.join(base_dir, "korea_fire_data_2007_2026_826683.xlsx")
-    if not os.path.exists(xlsx_path):
-        xlsx_path = os.path.join(base_dir, "2026-08-31_소방청 화재발생 상세-korea_fire_data_2007_2026_(826683건).xlsx")
-    
-    if os.path.exists(xlsx_path):
-        return FileResponse(
-            path=xlsx_path,
-            filename="korea_fire_data_2007_2026_826683.xlsx",
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    else:
-        # 엑셀 원본이 없을 경우 최신 DB 기준 CSV 스트리밍 다운로드
-        return await export_csv(start_year=2007, end_year=2026)
+    candidates = [
+        os.path.join(base_dir, "소방청_화재발생정보_전체DB.xlsx"),
+        os.path.join(base_dir, "korea_fire_data_2007_2026_826683.xlsx"),
+        os.path.join(base_dir, "2026-08-31_소방청 화재발생 상세-korea_fire_data_2007_2026_(826683건).xlsx")
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return FileResponse(
+                path=p,
+                filename="소방청_화재발생정보_전체DB.xlsx",
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+    return await export_csv(start_year=2007, end_year=2026)
 
 
 @app.get("/api/test-api-key")

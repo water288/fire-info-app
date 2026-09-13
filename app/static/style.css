@@ -89,3 +89,133 @@ body.mobile-optimized #mobileCardsContainer > div:active {
     transform: scale(0.98);
     border-color: #ef4444;
 }
+
+/* ==========================================
+   실시간 속보 배너 (Rolling Ticker Banner)
+   ========================================== */
+.ticker-container {
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+    border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.ticker-badge {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: pulseGlow 2s infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+.ticker-content {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+}
+
+.ticker-item {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    font-size: 12.5px;
+    color: #f1f5f9;
+}
+
+.ticker-item .ticker-time {
+    color: #f59e0b;
+    font-weight: 700;
+    margin-right: 6px;
+}
+
+.ticker-item .ticker-loc {
+    color: #60a5fa;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.ticker-item .ticker-verified {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+/* ==========================================
+   인터랙티브 지도 (Interactive Fire Map)
+   ========================================== */
+#fireMap {
+    width: 100%;
+    height: 420px;
+    border-radius: 1rem;
+    z-index: 10;
+}
+
+/* 지도 타일 다크 테마 커스텀 (워터마크 없음) */
+.leaflet-container {
+    background: #0b0f19 !important;
+    font-family: inherit !important;
+}
+
+.map-fire-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: white;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.map-fire-marker.verified {
+    background: linear-gradient(135deg, #ef4444, #991b1b);
+    border: 2px solid #fef08a;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.9);
+}
+
+.map-fire-marker.standard {
+    background: rgba(220, 38, 38, 0.85);
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+}
+
+.map-fire-marker:hover {
+    transform: scale(1.25);
+    z-index: 9999 !important;
+}
+
+/* 팝업 커스텀 */
+.leaflet-popup-content-wrapper {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-popup-tip {
+    background: #0f172a !important;
+}
+
+.leaflet-popup-content {
+    margin: 12px 14px !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}

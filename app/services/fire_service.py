@@ -101,15 +101,64 @@ def get_db_connection():
         return conn
     return None
 
+REGION_COORDINATES = {
+    "서울특별시": (37.5665, 126.9780),
+    "경기도": (37.4138, 127.5183),
+    "인천광역시": (37.4563, 126.7052),
+    "강원특별자치도": (37.8228, 128.1555),
+    "강원도": (37.8228, 128.1555),
+    "충청북도": (36.6357, 127.4917),
+    "충청남도": (36.5184, 126.8000),
+    "대전광역시": (36.3504, 127.3845),
+    "세종특별자치시": (36.4800, 127.2890),
+    "전북특별자치도": (35.7175, 127.1530),
+    "전라북도": (35.7175, 127.1530),
+    "전라남도": (34.8679, 126.9910),
+    "광주광역시": (35.1595, 126.8526),
+    "경상북도": (36.5760, 128.5056),
+    "경상남도": (35.4606, 128.2132),
+    "대구광역시": (35.8714, 128.6014),
+    "울산광역시": (35.5384, 129.3114),
+    "부산광역시": (35.1796, 129.0756),
+    "제주특별자치도": (33.4996, 126.5312)
+}
+
+def generate_dedup_key(record: Any) -> str:
+    """화재 사건 중복 식별용 복합 고유 키 생성 (발생일자_시도_발생시각_발화원인_장소)"""
+    if isinstance(record, dict):
+        d = record.get("fire_date") or record.get("occurDate", "")[:10]
+        s = record.get("sido") or record.get("region", "")
+        t = (record.get("fire_time") or record.get("occurTime", ""))[:5]
+        c = record.get("cause_category") or record.get("fireCause", "")
+        l = record.get("location_category") or record.get("placeCategory", "")
+    else:
+        d = getattr(record, "fire_date", "")
+        s = getattr(record, "sido", "")
+        t = getattr(record, "fire_time", "")[:5]
+        c = getattr(record, "cause_category", "")
+        l = getattr(record, "location_category", "")
+    return f"{d}_{s}_{t}_{c}_{l}"
+
 def set_real_fire_records(records: List[FireRecord]):
     global _REAL_FIRE_STORE
     records.sort(key=lambda x: x.fire_datetime, reverse=True)
     _REAL_FIRE_STORE = records
 
 def add_real_fire_records(records: List[FireRecord]):
+    """중복 방지(Deduplication)가 적용된 실제 레코드 추가"""
     global _REAL_FIRE_STORE
     existing_ids = {r.id for r in _REAL_FIRE_STORE}
-    new_items = [r for r in records if r.id not in existing_ids]
+    existing_dedup_keys = {r.dedup_key or generate_dedup_key(r) for r in _REAL_FIRE_STORE}
+    
+    new_items = []
+    for r in records:
+        dkey = r.dedup_key or generate_dedup_key(r)
+        if r.id not in existing_ids and dkey not in existing_dedup_keys:
+            r.dedup_key = dkey
+            new_items.append(r)
+            existing_ids.add(r.id)
+            existing_dedup_keys.add(dkey)
+            
     _REAL_FIRE_STORE.extend(new_items)
     _REAL_FIRE_STORE.sort(key=lambda x: x.fire_datetime, reverse=True)
 
@@ -121,6 +170,20 @@ def has_sqlite_db() -> bool:
     return os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 10000
 
 def row_to_fire_record(row: Any) -> FireRecord:
+    keys = row.keys() if hasattr(row, 'keys') else []
+    
+    sido_val = str(row["sido"])
+    lat_val = float(row["lat"]) if "lat" in keys and row["lat"] is not None else None
+    lng_val = float(row["lng"]) if "lng" in keys and row["lng"] is not None else None
+    
+    if lat_val is None or lng_val is None:
+        for k, coords in REGION_COORDINATES.items():
+            if k in sido_val or sido_val in k:
+                lat_val, lng_val = coords
+                break
+        if lat_val is None:
+            lat_val, lng_val = 36.5, 127.5
+
     return FireRecord(
         id=str(row["id"]),
         fire_datetime=str(row["fire_datetime"]),
@@ -128,22 +191,30 @@ def row_to_fire_record(row: Any) -> FireRecord:
         fire_time=str(row["fire_time"]),
         year=int(row["year"]),
         month=int(row["month"]),
-        sido=str(row["sido"]),
+        sido=sido_val,
         sigungu=str(row["sigungu"]),
-        eupmyeondong=str(row["eupmyeondong"]),
+        eupmyeondong=str(row["eupmyeondong"]) if row["eupmyeondong"] is not None else "",
         location_category=str(row["location_category"]),
         location_detail=str(row["location_detail"]),
         cause_category=str(row["cause_category"]),
         cause_detail=str(row["cause_detail"]),
-        deaths=int(row["deaths"]),
-        injuries=int(row["injuries"]),
-        casualties=int(row["casualties"]),
-        property_damage=int(row["property_damage"]),
-        suppression_minutes=int(row["suppression_minutes"]),
-        dispatched_personnel=int(row["dispatched_personnel"]),
-        dispatched_vehicles=int(row["dispatched_vehicles"]),
-        summary=str(row["summary"]),
-        is_realtime=bool(row["is_realtime"])
+        deaths=int(row["deaths"] or 0),
+        injuries=int(row["injuries"] or 0),
+        casualties=int(row["casualties"] or 0),
+        property_damage=int(row["property_damage"] or 0),
+        suppression_minutes=int(row["suppression_minutes"] or 0),
+        dispatched_personnel=int(row["dispatched_personnel"] or 0),
+        dispatched_vehicles=int(row["dispatched_vehicles"] or 0),
+        summary=str(row["summary"] or ""),
+        is_realtime=bool(row["is_realtime"]),
+        lat=lat_val,
+        lng=lng_val,
+        source=str(row["source"]) if "source" in keys and row["source"] is not None else "소방청 공식 데이터",
+        juris_station=str(row["juris_station"]) if "juris_station" in keys and row["juris_station"] is not None else None,
+        status=str(row["status"]) if "status" in keys and row["status"] is not None else "EXTINGUISHED",
+        status_text=str(row["status_text"]) if "status_text" in keys and row["status_text"] is not None else "완진",
+        is_verified=bool(row["is_verified"]) if "is_verified" in keys and row["is_verified"] is not None else False,
+        dedup_key=str(row["dedup_key"]) if "dedup_key" in keys and row["dedup_key"] is not None else None
     )
 
 def get_db_latest_date() -> str:
@@ -161,6 +232,108 @@ def get_db_latest_date() -> str:
             if conn:
                 conn.close()
     return get_kst_now().strftime("%Y-%m-%d")
+
+def get_breaking_news_items(limit: int = 20) -> List[Dict[str, Any]]:
+    """실시간 속보 배너용 최신 공식 화재 기록 목록 반환"""
+    conn = get_db_connection()
+    items = []
+    if conn:
+        try:
+            cur = conn.cursor()
+            # 1. 팩트 검증된 최신 공식 화재 우선 추출
+            cur.execute("SELECT * FROM fire_records WHERE is_verified = 1 ORDER BY fire_datetime DESC LIMIT ?", [limit])
+            rows = cur.fetchall()
+            for r in rows:
+                rec = row_to_fire_record(r)
+                items.append({
+                    "id": rec.id,
+                    "datetime": rec.fire_datetime,
+                    "date": rec.fire_date,
+                    "time": rec.fire_time,
+                    "region": rec.sido,
+                    "location": f"{rec.sido} {rec.sigungu} {rec.location_detail or rec.location_category}",
+                    "cause": rec.cause_detail or rec.cause_category,
+                    "status": rec.status_text or "완진",
+                    "casualties": rec.casualties,
+                    "deaths": rec.deaths,
+                    "is_verified": True,
+                    "source": rec.source or "소방청 공식 상황보고",
+                    "ticker_text": f"🔥 [공식속보] [{rec.sido}] {rec.sigungu} {rec.location_detail or rec.location_category} ({rec.fire_datetime}) - {rec.status_text or '완진'} [원인: {rec.cause_detail or rec.cause_category}]"
+                })
+            
+            # 부족할 경우 일반 최신 화재 추가
+            if len(items) < limit:
+                remaining = limit - len(items)
+                cur.execute("SELECT * FROM fire_records WHERE (is_verified IS NULL OR is_verified = 0) ORDER BY fire_datetime DESC LIMIT ?", [remaining])
+                rows2 = cur.fetchall()
+                for r in rows2:
+                    rec = row_to_fire_record(r)
+                    items.append({
+                        "id": rec.id,
+                        "datetime": rec.fire_datetime,
+                        "date": rec.fire_date,
+                        "time": rec.fire_time,
+                        "region": rec.sido,
+                        "location": f"{rec.sido} {rec.sigungu} {rec.location_detail or rec.location_category}",
+                        "cause": rec.cause_detail or rec.cause_category,
+                        "status": "완진",
+                        "casualties": rec.casualties,
+                        "deaths": rec.deaths,
+                        "is_verified": False,
+                        "source": "소방청 공공데이터포털",
+                        "ticker_text": f"📡 [공공데이터] [{rec.sido}] {rec.sigungu} {rec.location_category} ({rec.fire_datetime}) - 완진 [원인: {rec.cause_category}]"
+                    })
+            conn.close()
+            return items
+        except Exception:
+            if conn:
+                conn.close()
+    return items
+
+def get_map_markers_data(limit: int = 150) -> List[Dict[str, Any]]:
+    """지도 표출용 좌표 포함 화재 데이터 반환"""
+    conn = get_db_connection()
+    markers = []
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT * FROM fire_records 
+                WHERE is_verified = 1 OR year = 2026 
+                ORDER BY is_verified DESC, fire_datetime DESC 
+                LIMIT ?
+            """, [limit])
+            rows = cur.fetchall()
+            for r in rows:
+                rec = row_to_fire_record(r)
+                markers.append({
+                    "id": rec.id,
+                    "fire_datetime": rec.fire_datetime,
+                    "fire_date": rec.fire_date,
+                    "fire_time": rec.fire_time,
+                    "sido": rec.sido,
+                    "sigungu": rec.sigungu,
+                    "eupmyeondong": rec.eupmyeondong,
+                    "location_category": rec.location_category,
+                    "location_detail": rec.location_detail,
+                    "cause_category": rec.cause_category,
+                    "cause_detail": rec.cause_detail,
+                    "deaths": rec.deaths,
+                    "injuries": rec.injuries,
+                    "casualties": rec.casualties,
+                    "property_damage": rec.property_damage,
+                    "summary": rec.summary,
+                    "lat": rec.lat,
+                    "lng": rec.lng,
+                    "source": rec.source,
+                    "is_verified": rec.is_verified,
+                    "status_text": rec.status_text or "완진"
+                })
+            conn.close()
+        except Exception as e:
+            if conn:
+                conn.close()
+    return markers
 
 def query_real_fire_data(
     keyword: Optional[str] = None,

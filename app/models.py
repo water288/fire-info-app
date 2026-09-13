@@ -24,6 +24,14 @@ class FireRecord(BaseModel):
     dispatched_vehicles: int = Field(default=0, description="동원 차량 수")
     summary: Optional[str] = Field(default="", description="화재 개요 및 조치")
     is_realtime: Optional[bool] = Field(default=False, description="2026년 실시간 수신 사건 여부")
+    lat: Optional[float] = Field(default=None, description="위도 좌표")
+    lng: Optional[float] = Field(default=None, description="경도 좌표")
+    source: Optional[str] = Field(default=None, description="데이터 출처")
+    juris_station: Optional[str] = Field(default=None, description="관할 소방서")
+    status: Optional[str] = Field(default=None, description="진압 상태 코드")
+    status_text: Optional[str] = Field(default=None, description="진압 상태명")
+    is_verified: Optional[bool] = Field(default=False, description="소방청/소방본부 공식 팩트 검증 여부")
+    dedup_key: Optional[str] = Field(default=None, description="중복 방지 복합 해시 키")
 
 class SearchQuery(BaseModel):
     keyword: Optional[str] = None
