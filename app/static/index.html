@@ -149,9 +149,15 @@
                     <button onclick="resetMapView()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1">
                         <i class="fa-solid fa-crosshairs text-xs"></i><span>전국 중심</span>
                     </button>
+                    <button onclick="toggleMapSection()" id="toggleMapBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1">
+                        <span id="mapToggleText">지도 접기</span>
+                        <i class="fa-solid fa-chevron-up text-xs" id="mapToggleIcon"></i>
+                    </button>
                 </div>
             </div>
-            <div id="fireMap" class="shadow-inner border border-slate-800"></div>
+            <div id="fireMapContainer">
+                <div id="fireMap" class="shadow-inner border border-slate-800"></div>
+            </div>
         </section>
 
         <!-- 1. 통계 KPI 요약 카드 그리드 -->
@@ -792,6 +798,6 @@
     </footer>
 
     <!-- App Javascript (Cache-Busting) -->
-    <script src="/js/app.js?v=2026_realtime_sync_v43"></script>
+    <script src="/js/app.js?v=2026_realtime_sync_v44"></script>
 </body>
 </html>

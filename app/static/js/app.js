@@ -228,10 +228,11 @@ function initFireMap() {
         attributionControl: false
     });
 
-    // 워터마크 없는 깔끔한 CartoDB Dark/Voyager 타일
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // API 키 필요 없는 완전 무료 고선명 OpenStreetMap 타일
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd'
+        subdomains: ['a', 'b', 'c'],
+        attribution: '&copy; OpenStreetMap'
     }).addTo(fireMapInstance);
 
     mapMarkersLayer = L.layerGroup().addTo(fireMapInstance);
@@ -302,6 +303,26 @@ async function loadMapMarkers() {
 function resetMapView() {
     if (fireMapInstance) {
         fireMapInstance.setView([36.3, 127.8], 7);
+    }
+}
+
+function toggleMapSection() {
+    const container = document.getElementById('fireMapContainer');
+    const text = document.getElementById('mapToggleText');
+    const icon = document.getElementById('mapToggleIcon');
+    if (!container) return;
+
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        if (text) text.innerText = '지도 접기';
+        if (icon) icon.className = 'fa-solid fa-chevron-up text-xs';
+        if (fireMapInstance) {
+            setTimeout(() => fireMapInstance.invalidateSize(), 150);
+        }
+    } else {
+        container.classList.add('hidden');
+        if (text) text.innerText = '지도 펼치기';
+        if (icon) icon.className = 'fa-solid fa-chevron-down text-xs';
     }
 }
 
