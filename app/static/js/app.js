@@ -160,9 +160,10 @@ async function updateTickerData() {
         if (res.ok) {
             const data = await res.json();
             if (data.items && data.items.length > 0) {
-                const hadItems = tickerItems.length > 0;
+                const isFirst = (tickerItems.length === 0);
                 tickerItems = data.items;
-                if (!hadItems) {
+                if (isFirst) {
+                    tickerIndex = 0;
                     renderCurrentTickerItem();
                 }
             }

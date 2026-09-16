@@ -80,15 +80,24 @@ if not os.path.exists(DB_PATH) and not os.path.exists(GZ_PATH):
     GZ_PATH = "fire_records.db.gz"
 
 def ensure_sqlite_db():
-    """서버 시작 시 압축된 db.gz가 있으면 자동으로 복원"""
-    if not os.path.exists(DB_PATH) and os.path.exists(GZ_PATH):
-        import gzip
-        import shutil
-        print(f"Decompressing {GZ_PATH} to {DB_PATH}...")
-        with gzip.open(GZ_PATH, 'rb') as f_in:
-            with open(DB_PATH, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        print("SQLite database restored successfully.")
+    """서버 시작 및 호출 시 압축된 db.gz가 최신이거나 db가 없으면 자동으로 복원"""
+    if os.path.exists(GZ_PATH):
+        need_decompress = False
+        if not os.path.exists(DB_PATH):
+            need_decompress = True
+        elif os.path.getsize(DB_PATH) < 1000000:
+            need_decompress = True
+        elif os.path.getmtime(GZ_PATH) > os.path.getmtime(DB_PATH):
+            need_decompress = True
+
+        if need_decompress:
+            import gzip
+            import shutil
+            print(f"Decompressing {GZ_PATH} to {DB_PATH}...")
+            with gzip.open(GZ_PATH, 'rb') as f_in:
+                with open(DB_PATH, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            print("SQLite database restored successfully.")
 
 _REAL_FIRE_STORE: List[FireRecord] = []
 
@@ -240,10 +249,10 @@ def get_breaking_news_items(limit: int = 30) -> List[Dict[str, Any]]:
     if conn:
         try:
             cur = conn.cursor()
-            # 최신 발생일시(fire_datetime DESC) 기준으로 순수 최신 실제 화재 사건들을 추출
+            # 최신 발생일시(fire_date DESC, fire_time DESC) 기준으로 순수 최신 실제 화재 사건들을 추출
             cur.execute("""
                 SELECT * FROM fire_records 
-                ORDER BY fire_datetime DESC 
+                ORDER BY fire_date DESC, fire_time DESC, fire_datetime DESC 
                 LIMIT ?
             """, [limit])
             rows = cur.fetchall()
