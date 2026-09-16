@@ -178,20 +178,27 @@ def get_all_real_records() -> List[FireRecord]:
 def has_sqlite_db() -> bool:
     return os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 10000
 
+from app.services.geo_coordinates import get_precise_coordinates, SIGUNGU_COORDINATES, SIDO_COORDINATES
+
 def row_to_fire_record(row: Any) -> FireRecord:
     keys = row.keys() if hasattr(row, 'keys') else []
     
-    sido_val = str(row["sido"])
+    sido_val = str(row["sido"] or "")
+    sigungu_val = str(row["sigungu"] or "")
+    eupmyeondong_val = str(row["eupmyeondong"] or "") if "eupmyeondong" in keys and row["eupmyeondong"] is not None else ""
+    loc_det_val = str(row["location_detail"] or "") if "location_detail" in keys and row["location_detail"] is not None else ""
+    
     lat_val = float(row["lat"]) if "lat" in keys and row["lat"] is not None else None
     lng_val = float(row["lng"]) if "lng" in keys and row["lng"] is not None else None
     
-    if lat_val is None or lng_val is None:
-        for k, coords in REGION_COORDINATES.items():
-            if k in sido_val or sido_val in k:
-                lat_val, lng_val = coords
-                break
-        if lat_val is None:
-            lat_val, lng_val = 36.5, 127.5
+    # 만약 좌표가 없거나 충북도청/시도청 중심 등으로 잘못 편중된 경우 정밀 좌표로 재계산
+    if lat_val is None or lng_val is None or (lat_val == 0 and lng_val == 0):
+        lat_val, lng_val = get_precise_coordinates(sido_val, sigungu_val, eupmyeondong_val, loc_det_val)
+    elif sigungu_val and sigungu_val != sido_val:
+        # 단양군 등 시군구가 명확한데 충북도청(청주) 등의 중심좌표로 잘못 들어가 있는 경우 보정
+        if sigungu_val == "단양군" and (lat_val < 36.8 or lng_val < 128.0):
+            lat_val, lng_val = get_precise_coordinates(sido_val, sigungu_val, eupmyeondong_val, loc_det_val)
+
 
     return FireRecord(
         id=str(row["id"]),

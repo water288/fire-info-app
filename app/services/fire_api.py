@@ -107,12 +107,8 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
 
     record_id = f"ODCLOUD-{y}-{idx+1}"
 
-    # 좌표 추출
-    lat_val, lng_val = 36.5, 127.5
-    for k, coords in REGION_COORDINATES.items():
-        if k in sido or sido in k:
-            lat_val, lng_val = coords
-            break
+    from app.services.geo_coordinates import get_precise_coordinates
+    lat_val, lng_val = get_precise_coordinates(sido, sigungu, eupmyeondong, loc_det)
 
     dedup_key = f"{fire_date}_{sido}_{fire_time}_{cause_cat}_{loc_cat}"
 

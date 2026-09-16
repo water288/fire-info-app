@@ -87,7 +87,7 @@ def get_breaking_news():
 @app.get("/api/map-points")
 def get_map_points():
     """전국 화재 발생 현황 지도 표출용 데이터 반환"""
-    markers = get_map_markers_data(limit=150)
+    markers = get_map_markers_data(limit=300)
     return {
         "count": len(markers),
         "latest_date": get_db_latest_date(),
