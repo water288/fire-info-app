@@ -812,9 +812,18 @@ def calculate_real_statistics(
             cur.execute(f"SELECT location_category, COUNT(*) FROM fire_records{where_str} GROUP BY location_category ORDER BY COUNT(*) DESC", params)
             location_stats = [{"location": r[0], "count": r[1]} for r in cur.fetchall()]
 
-            # 연도별
-            cur.execute(f"SELECT year, COUNT(*) FROM fire_records{where_str} GROUP BY year ORDER BY year ASC", params)
-            yearly_stats = [{"year": str(r[0]), "count": r[1]} for r in cur.fetchall()]
+            # 연도별 (발생건수, 사망자수, 부상자수, 총사상자수)
+            cur.execute(f"SELECT year, COUNT(*), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0) FROM fire_records{where_str} GROUP BY year ORDER BY year ASC", params)
+            yearly_stats = [
+                {
+                    "year": str(r[0]),
+                    "count": r[1],
+                    "deaths": r[2],
+                    "injuries": r[3],
+                    "casualties": r[4] if r[4] > 0 else (r[2] + r[3])
+                } 
+                for r in cur.fetchall()
+            ]
 
             # 전국 총계
             cur.execute("SELECT COUNT(*) FROM fire_records")
@@ -870,10 +879,26 @@ def calculate_real_statistics(
     for r in rec_list:
         location_counts[r.location_category] = location_counts.get(r.location_category, 0) + 1
 
-    yearly_counts: Dict[str, int] = {}
+    yearly_counts: Dict[str, Dict[str, int]] = {}
     for r in rec_list:
         y_str = str(r.year)
-        yearly_counts[y_str] = yearly_counts.get(y_str, 0) + 1
+        if y_str not in yearly_counts:
+            yearly_counts[y_str] = {"count": 0, "deaths": 0, "injuries": 0, "casualties": 0}
+        yearly_counts[y_str]["count"] += 1
+        yearly_counts[y_str]["deaths"] += r.deaths
+        yearly_counts[y_str]["injuries"] += r.injuries
+        yearly_counts[y_str]["casualties"] += r.casualties
+
+    yearly_stats = [
+        {
+            "year": k,
+            "count": v["count"],
+            "deaths": v["deaths"],
+            "injuries": v["injuries"],
+            "casualties": v["casualties"]
+        }
+        for k, v in sorted(yearly_counts.items())
+    ]
 
     sido_total = 0
     if sido and sido != "전체":
@@ -897,5 +922,5 @@ def calculate_real_statistics(
         "sido_stats": [{"sido": k, "count": v} for k, v in sorted(sido_counts.items(), key=lambda x: x[1], reverse=True)],
         "cause_stats": [{"cause": k, "count": v} for k, v in sorted(cause_counts.items(), key=lambda x: x[1], reverse=True)],
         "location_stats": [{"location": k, "count": v} for k, v in sorted(location_counts.items(), key=lambda x: x[1], reverse=True)],
-        "yearly_stats": [{"year": k, "count": v} for k, v in sorted(yearly_counts.items())]
+        "yearly_stats": yearly_stats
     }

@@ -498,12 +498,42 @@ function initFilterEventListeners() {
         }
     });
 
-    // 시작/종료 연도 변경
-    document.getElementById('startYearSelect').addEventListener('change', () => applyFilters(1));
-    document.getElementById('endYearSelect').addEventListener('change', () => applyFilters(1));
+    // 시작/종료 연도 변경 핸들러
+    document.getElementById('startYearSelect').addEventListener('change', onYearSelectChange);
+    document.getElementById('endYearSelect').addEventListener('change', onYearSelectChange);
     document.getElementById('sigunguSelect').addEventListener('change', () => applyFilters(1));
     document.getElementById('causeSelect').addEventListener('change', () => applyFilters(1));
     document.getElementById('locationSelect').addEventListener('change', () => applyFilters(1));
+}
+
+// 연도 드롭다운 변경 시 기존 일자/기간 상세 필터(당일, 최근3일, 최근1개월 등) 자동 초기화
+function onYearSelectChange() {
+    state.filters.period = null;
+    state.filters.startDate = '';
+    state.filters.endDate = '';
+    state.filters.customDate = '';
+
+    // 기간 버튼 활성화 스타일 모두 해제
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
+    });
+    const customLabel = document.getElementById('customDateBtnLabel');
+    if (customLabel) customLabel.innerText = '📅 날짜 직접 선택';
+
+    const sYear = document.getElementById('startYearSelect').value;
+    const eYear = document.getElementById('endYearSelect').value;
+
+    // 프리셋 버튼 활성화 상태 동기화
+    document.querySelectorAll('.year-preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (sYear === '2026' && eYear === '2026' && btn.dataset.val === '2026') btn.classList.add('active');
+        else if (sYear === '2007' && eYear === '2026' && btn.dataset.val === 'all') btn.classList.add('active');
+        else if ((sYear === '2016' || sYear === '2017') && eYear === '2026' && btn.dataset.val === 'recent10') btn.classList.add('active');
+        else if (sYear === '2022' && eYear === '2026' && btn.dataset.val === 'recent5') btn.classList.add('active');
+        else if (sYear === '2024' && eYear === '2026' && btn.dataset.val === 'recent3') btn.classList.add('active');
+    });
+
+    applyFilters(1);
 }
 
 // 시도 변경 시 시군구 동적 갱신
@@ -540,6 +570,7 @@ function setYearPreset(preset) {
     state.filters.period = null;
     state.filters.startDate = '';
     state.filters.endDate = '';
+    state.filters.customDate = '';
     document.querySelectorAll('.period-btn').forEach(btn => {
         btn.className = 'period-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition flex items-center gap-1';
     });
@@ -550,7 +581,7 @@ function setYearPreset(preset) {
         startSel.value = "2007";
         endSel.value = "2026";
     } else if (preset === 'recent10') {
-        startSel.value = "2017";
+        startSel.value = "2016";
         endSel.value = "2026";
     } else if (preset === 'recent5') {
         startSel.value = "2022";
@@ -1207,8 +1238,8 @@ function renderYearlyTrendChart(trendData) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const labels = trendData.map(d => `${d.year}년`);
-    const fireCounts = trendData.map(d => d.count);
-    const casualties = trendData.map(d => d.deaths + d.injuries);
+    const fireCounts = trendData.map(d => d.count || 0);
+    const casualties = trendData.map(d => (d.casualties !== undefined && d.casualties !== null) ? d.casualties : ((d.deaths || 0) + (d.injuries || 0)));
 
     if (state.charts.yearly) {
         state.charts.yearly.destroy();
