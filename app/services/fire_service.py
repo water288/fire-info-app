@@ -233,56 +233,43 @@ def get_db_latest_date() -> str:
                 conn.close()
     return get_kst_now().strftime("%Y-%m-%d")
 
-def get_breaking_news_items(limit: int = 20) -> List[Dict[str, Any]]:
-    """실시간 속보 배너용 최신 공식 화재 기록 목록 반환"""
+def get_breaking_news_items(limit: int = 30) -> List[Dict[str, Any]]:
+    """실시간 속보 배너용 최신 공식 화재 기록 목록 반환 (발생일시 최신순)"""
     conn = get_db_connection()
     items = []
     if conn:
         try:
             cur = conn.cursor()
-            # 1. 팩트 검증된 최신 공식 화재 우선 추출
-            cur.execute("SELECT * FROM fire_records WHERE is_verified = 1 ORDER BY fire_datetime DESC LIMIT ?", [limit])
+            # 최신 발생일시(fire_datetime DESC) 기준으로 순수 최신 실제 화재 사건들을 추출
+            cur.execute("""
+                SELECT * FROM fire_records 
+                ORDER BY fire_datetime DESC 
+                LIMIT ?
+            """, [limit])
             rows = cur.fetchall()
             for r in rows:
                 rec = row_to_fire_record(r)
+                is_ver = bool(rec.is_verified)
+                status_txt = rec.status_text or "완진"
+                location_str = f"{rec.sido} {rec.sigungu} {rec.location_detail or rec.location_category}".strip()
+                cause_str = rec.cause_detail or rec.cause_category
+                
                 items.append({
                     "id": rec.id,
                     "datetime": rec.fire_datetime,
                     "date": rec.fire_date,
                     "time": rec.fire_time,
                     "region": rec.sido,
-                    "location": f"{rec.sido} {rec.sigungu} {rec.location_detail or rec.location_category}",
-                    "cause": rec.cause_detail or rec.cause_category,
-                    "status": rec.status_text or "완진",
+                    "location": location_str,
+                    "cause": cause_str,
+                    "status": status_txt,
                     "casualties": rec.casualties,
                     "deaths": rec.deaths,
-                    "is_verified": True,
-                    "source": rec.source or "소방청 공식 상황보고",
-                    "ticker_text": f"🔥 [공식속보] [{rec.sido}] {rec.sigungu} {rec.location_detail or rec.location_category} ({rec.fire_datetime}) - {rec.status_text or '완진'} [원인: {rec.cause_detail or rec.cause_category}]"
+                    "injuries": rec.injuries,
+                    "is_verified": is_ver,
+                    "source": rec.source or ("소방청 공식 상황보고" if is_ver else "소방청 공공데이터포털"),
+                    "ticker_text": f"🔥 [{rec.sido}] {rec.sigungu} {rec.location_detail or rec.location_category} ({rec.fire_datetime}) - {status_txt} [원인: {cause_str}]"
                 })
-            
-            # 부족할 경우 일반 최신 화재 추가
-            if len(items) < limit:
-                remaining = limit - len(items)
-                cur.execute("SELECT * FROM fire_records WHERE (is_verified IS NULL OR is_verified = 0) ORDER BY fire_datetime DESC LIMIT ?", [remaining])
-                rows2 = cur.fetchall()
-                for r in rows2:
-                    rec = row_to_fire_record(r)
-                    items.append({
-                        "id": rec.id,
-                        "datetime": rec.fire_datetime,
-                        "date": rec.fire_date,
-                        "time": rec.fire_time,
-                        "region": rec.sido,
-                        "location": f"{rec.sido} {rec.sigungu} {rec.location_detail or rec.location_category}",
-                        "cause": rec.cause_detail or rec.cause_category,
-                        "status": "완진",
-                        "casualties": rec.casualties,
-                        "deaths": rec.deaths,
-                        "is_verified": False,
-                        "source": "소방청 공공데이터포털",
-                        "ticker_text": f"📡 [공공데이터] [{rec.sido}] {rec.sigungu} {rec.location_category} ({rec.fire_datetime}) - 완진 [원인: {rec.cause_category}]"
-                    })
             conn.close()
             return items
         except Exception:

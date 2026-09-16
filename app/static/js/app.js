@@ -123,33 +123,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Initial data load error:', e);
     }
 
-    // 30초 주기 실시간 라이브 자동 동기화 (사용자가 2026년 실시간을 조회 중일 때 백그라운드 자동 갱신)
+    // 20초 주기 실시간 라이브 자동 동기화 (화재 목록, 지도 마커, 실시간 속보 자동 갱신)
     setInterval(async () => {
-        const endYearSelectEl = document.getElementById('endYearSelect');
-        const endYearVal = endYearSelectEl ? parseInt(endYearSelectEl.value) : 2026;
-        if (endYearVal === 2026 && state.pagination.page === 1) {
-            try {
+        try {
+            await updateTickerData();
+            await loadMapMarkers();
+            const endYearSelectEl = document.getElementById('endYearSelect');
+            const endYearVal = endYearSelectEl ? parseInt(endYearSelectEl.value) : 2026;
+            if (endYearVal === 2026 && state.pagination.page === 1) {
                 await fetchTableData(1);
-                await loadMapMarkers();
-            } catch (err) {
-                console.warn('실시간 자동 동기화 대기 중:', err);
             }
+        } catch (err) {
+            console.warn('실시간 자동 동기화 대기 중:', err);
         }
-    }, 30000);
+    }, 20000);
 });
 
 // ==========================================
 // 1. 실시간 속보 배너 (Rolling Ticker Banner)
 // ==========================================
 async function initTicker() {
+    await updateTickerData();
+    startTickerTimer();
+
+    // 마우스 호버 시 일시정지 / 마우스 이탈 시 롤링 재개
+    const container = document.querySelector('.ticker-container');
+    if (container) {
+        container.addEventListener('mouseenter', () => { tickerPlaying = false; });
+        container.addEventListener('mouseleave', () => { tickerPlaying = true; });
+    }
+}
+
+async function updateTickerData() {
     try {
         const res = await fetchWithRetry('/api/breaking-news');
         if (res.ok) {
             const data = await res.json();
             if (data.items && data.items.length > 0) {
+                const hadItems = tickerItems.length > 0;
                 tickerItems = data.items;
-                renderCurrentTickerItem();
-                startTickerTimer();
+                if (!hadItems) {
+                    renderCurrentTickerItem();
+                }
             }
         }
     } catch (e) {
@@ -164,15 +179,15 @@ function renderCurrentTickerItem() {
     
     const verifiedBadge = item.is_verified 
         ? `<span class="ticker-verified">🔒 공식검증</span>` 
-        : `<span class="px-1.5 py-0.5 bg-slate-800 text-slate-400 border border-slate-700 rounded text-[10px] mr-1.5">📡 공공데이터</span>`;
+        : `<span class="px-1.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded text-[10px] mr-1.5 font-medium">📡 실시간</span>`;
 
     container.innerHTML = `
-        <div class="ticker-item flex items-center cursor-pointer hover:text-white" onclick="openDetailModal('${item.id}')">
+        <div class="ticker-item flex items-center cursor-pointer hover:text-white transition-opacity duration-300" onclick="openDetailModal('${item.id}')">
             ${verifiedBadge}
-            <span class="ticker-time">[${item.datetime}]</span>
-            <span class="ticker-loc">[${item.region}]</span>
-            <span class="font-medium mr-2">${item.location}</span>
-            <span class="text-amber-400 text-[11px] mr-2">진압: ${item.status || '완진'}</span>
+            <span class="ticker-time text-amber-300 font-bold mr-1.5">[${item.datetime}]</span>
+            <span class="ticker-loc text-cyan-300 font-semibold mr-1.5">[${item.region}]</span>
+            <span class="font-medium mr-2 text-slate-100">${item.location}</span>
+            <span class="text-emerald-400 text-[11px] font-semibold mr-2">진압: ${item.status || '완진'}</span>
             <span class="text-slate-400 text-[11px]">[원인: ${item.cause}]</span>
         </div>
     `;
@@ -185,7 +200,7 @@ function startTickerTimer() {
             tickerIndex = (tickerIndex + 1) % tickerItems.length;
             renderCurrentTickerItem();
         }
-    }, 5000);
+    }, 4500);
 }
 
 function nextTickerItem() {
