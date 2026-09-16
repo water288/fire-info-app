@@ -35,7 +35,7 @@ class FireRecord(BaseModel):
 
 class SearchQuery(BaseModel):
     keyword: Optional[str] = None
-    start_year: Optional[int] = 2017
+    start_year: Optional[int] = 2007
     end_year: Optional[int] = 2026
     start_date: Optional[str] = None
     end_date: Optional[str] = None
