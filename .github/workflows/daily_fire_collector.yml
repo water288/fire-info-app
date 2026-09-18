@@ -1,0 +1,43 @@
+name: Daily Fire Data Auto Collector (06:30 KST)
+
+on:
+  schedule:
+    # 21:30 UTC = 매일 한국시간(KST) 오전 06:30
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install beautifulsoup4 requests pypdf pymupdf olefile
+
+      - name: Run Unified Fire Daily Collector
+        run: |
+          python scripts/unified_daily_collector.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add fire_records.db.gz
+          if git diff --staged --quiet; then
+            echo "No new data found today. Database is already up to date."
+          else
+            git commit -m "[Auto-Update] Daily fire incidents data update"
+            git push
+          fi

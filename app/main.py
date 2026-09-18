@@ -24,7 +24,8 @@ from app.services.fire_service import (
     query_real_fire_data,
     get_db_latest_date,
     get_breaking_news_items,
-    get_map_markers_data
+    get_map_markers_data,
+    ensure_sqlite_db
 )
 from app.services.fire_api import (
     test_odcloud_connection,
@@ -33,11 +34,37 @@ from app.services.fire_api import (
     is_synced_with_official_api,
     ODCLOUD_FIRE_ENDPOINTS
 )
+from contextlib import asynccontextmanager
+import sys
+import asyncio
+import subprocess
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """서버 시작 시 SQLite 복원 및 백그라운드 실시간 수집 태스크 시작"""
+    ensure_sqlite_db()
+    
+    # 백그라운드 주기적 최신화 태스크 (1시간 주기)
+    async def periodic_collector_task():
+        while True:
+            try:
+                await asyncio.sleep(3600)  # 1시간마다
+                print("[자동수집] 백그라운드 정기 화재 데이터 갱신 시작...")
+                scripts_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "unified_daily_collector.py")
+                if os.path.exists(scripts_path):
+                    subprocess.Popen([sys.executable, scripts_path])
+            except Exception as e:
+                print(f"[자동수집] 백그라운드 태스크 오류: {e}")
+
+    task = asyncio.create_task(periodic_collector_task())
+    yield
+    task.cancel()
 
 app = FastAPI(
     title="소방청 화재발생 데이터 통합 검색 & 분석 포털",
     description="소방청 공공데이터포털 공식 API 연동 순수 실제 화재 정보 검색 및 분석 포털",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS 허용
@@ -48,6 +75,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/api/sync-realtime")
+@app.get("/api/sync-realtime")
+async def sync_realtime_data():
+    """소방청 및 전국 17개 시도 소방본부 실시간 일보 수집 및 DB 즉시 갱신"""
+    scripts_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "unified_daily_collector.py")
+    if not os.path.exists(scripts_path):
+        raise HTTPException(status_code=404, detail="Collector script not found")
+    
+    try:
+        proc = subprocess.run([sys.executable, scripts_path], capture_output=True, text=True, timeout=60)
+        latest_date = get_db_latest_date()
+        return {
+            "status": "success",
+            "message": "실시간 화재 데이터 수집 및 데이터베이스 최신화 완료",
+            "latest_date": latest_date,
+            "output": proc.stdout[-300:] if proc.stdout else ""
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"실시간 수집 실행 중 오류 발생: {str(e)}",
+            "latest_date": get_db_latest_date()
+        }
 
 
 @app.get("/api/meta")
