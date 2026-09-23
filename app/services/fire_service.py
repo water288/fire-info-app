@@ -57,11 +57,18 @@ LOCATIONS = {
 }
 
 def get_db_available_years() -> List[int]:
-    """실제 데이터베이스에 존재하는 연도 목록 반환 (오직 순수 실제 데이터 기준)"""
+    """실제 데이터베이스에 존재하는 연도 목록 반환 (소방청 공식 데이터 기준)"""
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_yearly_stats'")
+            if cur.fetchone():
+                cur.execute("SELECT DISTINCT year FROM nfa_yearly_stats WHERE year IS NOT NULL ORDER BY year DESC")
+                years = [int(r[0]) for r in cur.fetchall() if r[0]]
+                if years:
+                    conn.close()
+                    return years
             cur.execute("SELECT DISTINCT year FROM fire_records WHERE year IS NOT NULL ORDER BY year DESC")
             years = [int(r[0]) for r in cur.fetchall() if r[0]]
             conn.close()
@@ -70,7 +77,7 @@ def get_db_available_years() -> List[int]:
         except Exception:
             if conn:
                 conn.close()
-    return [get_kst_now().year]
+    return list(range(get_kst_now().year, 2006, -1))
 
 # ==========================================
 # 순수 실제 데이터 저장소 (SQLite & Memory)
@@ -243,11 +250,20 @@ def get_db_latest_date() -> str:
     if conn:
         try:
             cur = conn.cursor()
-            cur.execute("SELECT MAX(fire_date) FROM fire_records")
-            row = cur.fetchone()
+            dates = []
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_national_daily'")
+            if cur.fetchone():
+                cur.execute("SELECT MAX(date) FROM nfa_national_daily WHERE date IS NOT NULL")
+                r = cur.fetchone()
+                if r and r[0]:
+                    dates.append(r[0])
+            cur.execute("SELECT MAX(fire_date) FROM fire_records WHERE fire_date IS NOT NULL")
+            r = cur.fetchone()
+            if r and r[0]:
+                dates.append(r[0])
             conn.close()
-            if row and row[0]:
-                return row[0]
+            if dates:
+                return max(dates)
         except Exception:
             if conn:
                 conn.close()
@@ -473,18 +489,43 @@ def query_real_fire_data(
                 y_where.append("year <= ?")
                 y_params.append(end_year)
             y_str = (" WHERE " + " AND ".join(y_where)) if y_where else ""
-            cur.execute(f"SELECT COUNT(*) FROM fire_records{y_str}", y_params)
-            year_scope_total = cur.fetchone()[0]
+            
+            # nfa_yearly_stats가 존재하고 전국 범위 조회인 경우 공식 통계 건수 사용
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_yearly_stats'")
+            has_yearly_table = bool(cur.fetchone())
+            
+            if has_yearly_table and not (sido and sido != "전체") and not (sigungu and sigungu != "전체") and not keyword and not cause_category and not location_category and not calc_start_date and not calc_end_date and not has_deaths and min_casualties is None and min_damage is None:
+                cur.execute(f"SELECT COALESCE(SUM(total_fires), 0) FROM nfa_yearly_stats{y_str}", y_params)
+                year_scope_total = cur.fetchone()[0]
+            else:
+                cur.execute(f"SELECT COUNT(*) FROM fire_records{y_str}", y_params)
+                year_scope_total = cur.fetchone()[0]
 
             # 4. 오늘(또는 최신일자) 발생 건수
-            cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [today_str])
-            today_total = cur.fetchone()[0]
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_national_daily'")
+            has_daily_table = bool(cur.fetchone())
+            
+            today_total = 0
+            if has_daily_table:
+                cur.execute("SELECT fire_count FROM nfa_national_daily WHERE date = ?", [today_str])
+                r_today = cur.fetchone()
+                if r_today and r_today[0]:
+                    today_total = r_today[0]
+                else:
+                    cur.execute("SELECT fire_count FROM nfa_national_daily ORDER BY date DESC LIMIT 1")
+                    r_last = cur.fetchone()
+                    if r_last and r_last[0]:
+                        today_total = r_last[0]
+            
             if today_total == 0:
-                cur.execute("SELECT MAX(fire_date) FROM fire_records")
-                max_d = cur.fetchone()[0]
-                if max_d:
-                    cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [max_d])
-                    today_total = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [today_str])
+                today_total = cur.fetchone()[0]
+                if today_total == 0:
+                    cur.execute("SELECT MAX(fire_date) FROM fire_records")
+                    max_d = cur.fetchone()[0]
+                    if max_d:
+                        cur.execute("SELECT COUNT(*) FROM fire_records WHERE fire_date = ?", [max_d])
+                        today_total = cur.fetchone()[0]
 
             # 5. 시도 건수
             sido_total = 0
@@ -795,50 +836,134 @@ def calculate_real_statistics(
             where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
             cur = conn.cursor()
 
-            # 기본 KPI
-            cur.execute(f"SELECT COUNT(*), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0), COALESCE(SUM(property_damage), 0) FROM fire_records{where_str}", params)
-            row = cur.fetchone()
-            total_fires = row[0]
-            total_deaths = row[1]
-            total_injuries = row[2]
-            total_casualties = row[3]
-            total_damage = row[4]
+            # 테이블 존재 여부 확인
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_yearly_stats'")
+            has_yearly_table = bool(cur.fetchone())
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nfa_national_daily'")
+            has_daily_table = bool(cur.fetchone())
 
-            # 시도별
-            cur.execute(f"SELECT sido, COUNT(*) FROM fire_records{where_str} GROUP BY sido ORDER BY COUNT(*) DESC", params)
-            sido_stats = [{"sido": r[0], "count": r[1]} for r in cur.fetchall()]
+            has_subfilter = bool(
+                (sido and sido != "전체") or 
+                (sigungu and sigungu != "전체") or 
+                (cause_category and cause_category != "전체") or 
+                (location_category and location_category != "전체") or 
+                keyword or 
+                (has_deaths is True) or 
+                (min_casualties is not None) or 
+                (min_damage is not None)
+            )
 
-            # 원인별
-            cur.execute(f"SELECT cause_category, COUNT(*) FROM fire_records{where_str} GROUP BY cause_category ORDER BY COUNT(*) DESC", params)
-            cause_stats = [{"cause": r[0], "count": r[1]} for r in cur.fetchall()]
+            if not has_subfilter and has_yearly_table:
+                # 1. 일자/기간 필터가 적용된 경우 -> nfa_national_daily 기준 집계
+                if (calc_start_date or calc_end_date) and has_daily_table:
+                    d_where = []
+                    d_params = []
+                    if calc_start_date:
+                        d_where.append("date >= ?")
+                        d_params.append(calc_start_date)
+                    if calc_end_date:
+                        d_where.append("date <= ?")
+                        d_params.append(calc_end_date)
+                    d_str = (" WHERE " + " AND ".join(d_where)) if d_where else ""
 
-            # 장소별
-            cur.execute(f"SELECT location_category, COUNT(*) FROM fire_records{where_str} GROUP BY location_category ORDER BY COUNT(*) DESC", params)
-            location_stats = [{"location": r[0], "count": r[1]} for r in cur.fetchall()]
+                    cur.execute(f"SELECT COALESCE(SUM(fire_count), 0), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0), COALESCE(SUM(total_damage), 0) FROM nfa_national_daily{d_str}", d_params)
+                    row = cur.fetchone()
+                    total_fires = row[0]
+                    total_deaths = row[1]
+                    total_injuries = row[2]
+                    total_casualties = row[3]
+                    total_damage = row[4]
 
-            # 연도별 (발생건수, 사망자수, 부상자수, 총사상자수)
-            cur.execute(f"SELECT year, COUNT(*), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0) FROM fire_records{where_str} GROUP BY year ORDER BY year ASC", params)
-            yearly_stats = [
-                {
-                    "year": str(r[0]),
-                    "count": r[1],
-                    "deaths": r[2],
-                    "injuries": r[3],
-                    "casualties": r[4] if r[4] > 0 else (r[2] + r[3])
-                } 
-                for r in cur.fetchall()
-            ]
+                    cur.execute(f"SELECT year, SUM(fire_count), SUM(deaths), SUM(injuries), SUM(casualties) FROM nfa_national_daily{d_str} GROUP BY year ORDER BY year ASC", d_params)
+                    yearly_stats = [
+                        {
+                            "year": str(r[0]),
+                            "count": r[1],
+                            "deaths": r[2],
+                            "injuries": r[3],
+                            "casualties": r[4] if r[4] > 0 else (r[2] + r[3])
+                        }
+                        for r in cur.fetchall()
+                    ]
+                else:
+                    # 2. 연도 범위 또는 전체 연도 조회 -> nfa_yearly_stats 기준 공식 통계 집계
+                    y_where = []
+                    y_params = []
+                    if start_year:
+                        y_where.append("year >= ?")
+                        y_params.append(start_year)
+                    if end_year:
+                        y_where.append("year <= ?")
+                        y_params.append(end_year)
+                    y_str = (" WHERE " + " AND ".join(y_where)) if y_where else ""
 
-            # 전국 총계
-            cur.execute("SELECT COUNT(*) FROM fire_records")
-            national_total = cur.fetchone()[0]
+                    cur.execute(f"SELECT COALESCE(SUM(total_fires), 0), COALESCE(SUM(total_deaths), 0), COALESCE(SUM(total_injuries), 0), COALESCE(SUM(total_casualties), 0), COALESCE(SUM(total_damage), 0) FROM nfa_yearly_stats{y_str}", y_params)
+                    row = cur.fetchone()
+                    total_fires = row[0]
+                    total_deaths = row[1]
+                    total_injuries = row[2]
+                    total_casualties = row[3]
+                    total_damage = row[4]
 
-            sido_total = 0
-            if sido and sido != "전체":
-                cur.execute("SELECT COUNT(*) FROM fire_records WHERE sido LIKE ?", [f"%{sido}%"])
-                sido_total = cur.fetchone()[0]
+                    cur.execute(f"SELECT year, total_fires, total_deaths, total_injuries, total_casualties FROM nfa_yearly_stats{y_str} ORDER BY year ASC", y_params)
+                    yearly_stats = [
+                        {
+                            "year": str(r[0]),
+                            "count": r[1],
+                            "deaths": r[2],
+                            "injuries": r[3],
+                            "casualties": r[4] if r[4] > 0 else (r[2] + r[3])
+                        }
+                        for r in cur.fetchall()
+                    ]
+
+                cur.execute("SELECT COALESCE(SUM(total_fires), 0) FROM nfa_yearly_stats")
+                national_total = cur.fetchone()[0]
+                sido_total = total_fires
             else:
-                sido_total = national_total
+                # 3. 상세 세부조건(시도, 원인, 장소 등) 필터 적용 시 -> fire_records 기준 집계
+                cur.execute(f"SELECT COUNT(*), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0), COALESCE(SUM(property_damage), 0) FROM fire_records{where_str}", params)
+                row = cur.fetchone()
+                total_fires = row[0]
+                total_deaths = row[1]
+                total_injuries = row[2]
+                total_casualties = row[3]
+                total_damage = row[4]
+
+                # 연도별 (발생건수, 사망자수, 부상자수, 총사상자수)
+                cur.execute(f"SELECT year, COUNT(*), COALESCE(SUM(deaths), 0), COALESCE(SUM(injuries), 0), COALESCE(SUM(casualties), 0) FROM fire_records{where_str} GROUP BY year ORDER BY year ASC", params)
+                yearly_stats = [
+                    {
+                        "year": str(r[0]),
+                        "count": r[1],
+                        "deaths": r[2],
+                        "injuries": r[3],
+                        "casualties": r[4] if r[4] > 0 else (r[2] + r[3])
+                    } 
+                    for r in cur.fetchall()
+                ]
+
+                # 전국 총계
+                cur.execute("SELECT COUNT(*) FROM fire_records")
+                national_total = cur.fetchone()[0]
+
+                if sido and sido != "전체":
+                    cur.execute("SELECT COUNT(*) FROM fire_records WHERE sido LIKE ?", [f"%{sido}%"])
+                    sido_total = cur.fetchone()[0]
+                else:
+                    sido_total = national_total
+
+            # 시도별 분포 (fire_records 기준)
+            cur.execute(f"SELECT sido, COUNT(*) FROM fire_records{where_str} GROUP BY sido ORDER BY COUNT(*) DESC", params)
+            sido_stats = [{"sido": r[0], "count": r[1]} for r in cur.fetchall() if r[0]]
+
+            # 원인별 분포 (fire_records 기준)
+            cur.execute(f"SELECT cause_category, COUNT(*) FROM fire_records{where_str} GROUP BY cause_category ORDER BY COUNT(*) DESC", params)
+            cause_stats = [{"cause": r[0], "count": r[1]} for r in cur.fetchall() if r[0]]
+
+            # 장소별 분포 (fire_records 기준)
+            cur.execute(f"SELECT location_category, COUNT(*) FROM fire_records{where_str} GROUP BY location_category ORDER BY COUNT(*) DESC", params)
+            location_stats = [{"location": r[0], "count": r[1]} for r in cur.fetchall() if r[0]]
 
             sido_pct = round((sido_total / max(1, national_total)) * 100, 1) if national_total > 0 else 0.0
             sgg_pct = round((total_fires / max(1, sido_total)) * 100, 1) if (sigungu and sigungu != "전체" and sido_total > 0) else None
