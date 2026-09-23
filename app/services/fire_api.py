@@ -25,10 +25,10 @@ ODCLOUD_BASE_URL = "https://api.odcloud.kr/api/15044003/v1/uddi:"
 SYNCED_REAL_RECORDS: List[FireRecord] = []
 IS_API_SYNCED = False
 
-from app.services.fire_service import SPECIFIC_EUPMYEONDONG, get_eupmyeondong_for_region, set_real_fire_records, REGION_COORDINATES, generate_dedup_key, add_real_fire_records
+from app.services.fire_service import set_real_fire_records, REGION_COORDINATES, generate_dedup_key, add_real_fire_records
 
 def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
-    """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱 및 정밀 일시/읍면동 매핑"""
+    """ODCloud 한글 키/영문 키 화재 데이터 레코드 파싱 및 순수 실제 데이터 매핑"""
     
     # 1. 일시 파싱 (다양한 ODCloud 필드명 지원)
     date_str = ""
@@ -39,8 +39,8 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
                 date_str = str(v).strip()
                 break
 
-    fire_date = ""
-    fire_time = ""
+    fire_date = f"{year_hint}-01-01"
+    fire_time = "00:00"
 
     if " " in date_str and len(date_str) >= 10:
         parts = date_str.split(" ")
@@ -56,17 +56,6 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
         if len(clean_d) >= 12:
             fire_time = f"{clean_d[8:10]}:{clean_d[10:12]}"
 
-    # 파싱된 일시가 없거나 01-01로만 고정된 경우, 연중 실제 발생일시로 분산
-    if not fire_date or fire_date.endswith("-01-01"):
-        m = (idx % 12) + 1
-        d = ((idx * 7) % 28) + 1
-        fire_date = f"{year_hint}-{m:02d}-{d:02d}"
-
-    if not fire_time or fire_time == "00:00":
-        h = (idx * 3 + 7) % 24
-        mi = (idx * 17) % 60
-        fire_time = f"{h:02d}:{mi:02d}"
-
     y = year_hint
     try:
         m = int(fire_date[5:7])
@@ -75,13 +64,10 @@ def parse_odcloud_record(item: dict, year_hint: int, idx: int) -> FireRecord:
 
     fire_datetime = f"{fire_date} {fire_time}"
 
-    # 2. 지역 및 읍면동 보강
-    sido = str(item.get("시도") or item.get("시·도") or item.get("sidoNm") or "충청북도")
-    sigungu = str(item.get("시군구") or item.get("시·군·구") or item.get("sggNm") or "음성군")
+    # 2. 지역 및 읍면동
+    sido = str(item.get("시도") or item.get("시·도") or item.get("sidoNm") or "전국")
+    sigungu = str(item.get("시군구") or item.get("시·군·구") or item.get("sggNm") or "전체")
     eupmyeondong = str(item.get("읍면동") or item.get("읍·면·동") or item.get("emdNm") or "")
-    
-    if not eupmyeondong:
-        eupmyeondong = get_eupmyeondong_for_region(sido, sigungu, idx)
 
     # 3. 장소 분류
     loc_cat = str(item.get("장소대분류") or item.get("장소(대)") or item.get("firsPlcNm") or "일반시설")

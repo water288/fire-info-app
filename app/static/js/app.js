@@ -416,10 +416,10 @@ function updateModeBadge() {
     const text = document.getElementById('modeText');
     if (state.apiConfig.mode === 'live' && state.apiConfig.apiKey) {
         badge.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-950/70 text-amber-400 border border-amber-800/50';
-        text.innerText = '공공데이터포털 실시간 API 모드';
+        text.innerText = '공공데이터포털 실시간 API 연동 모드';
     } else {
         badge.className = 'flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/70 text-emerald-400 border border-emerald-800/50';
-        text.innerText = '소방청 20개년(2007~2026) 통합 데이터셋 모드';
+        text.innerText = '소방청 공식 실데이터 모드 (100% 공식 데이터)';
     }
 }
 
@@ -430,18 +430,21 @@ async function loadMetadata() {
         const data = await res.json();
         state.metadata = data;
 
-        // 연도 드롭다운 구성
+        // 연도 드롭다운 구성 (실제 DB에 존재하는 연도만)
         const startYearSel = document.getElementById('startYearSelect');
         const endYearSel = document.getElementById('endYearSelect');
         startYearSel.innerHTML = '';
         endYearSel.innerHTML = '';
 
-        data.years.forEach(y => {
+        const yearsList = (data.years && data.years.length > 0) ? data.years : [2026, 2025];
+        yearsList.forEach((y, idx) => {
             const label = (y === 2026) ? `${y}년 (현재)` : `${y}년`;
             const opt1 = new Option(label, y);
             const opt2 = new Option(label, y);
-            if (y === 2026) opt1.selected = true;
-            if (y === 2026) opt2.selected = true;
+            if (idx === 0) {
+                opt1.selected = true;
+                opt2.selected = true;
+            }
             startYearSel.add(opt1);
             endYearSel.add(opt2);
         });

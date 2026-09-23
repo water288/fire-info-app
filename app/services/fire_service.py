@@ -56,17 +56,21 @@ LOCATIONS = {
     "위험물/저장시설": ["주유소/충전소", "가스저장소", "화학물질 저장소"]
 }
 
-SPECIFIC_EUPMYEONDONG = {
-    "금천구": ["가산동", "독산동", "시흥동"],
-    "강남구": ["역삼동", "개포동", "청담동", "삼성동", "대치동", "신사동", "논현동", "압구정동"],
-    "청주시": ["오창읍", "오송읍", "내수읍", "옥산면", "가경동", "복대동", "봉명동", "율량동", "용암동", "금천동", "산남동", "분평동", "수곡동"]
-}
-
-def get_eupmyeondong_for_region(sido: str, sigungu: str, seed_index: int = 0) -> str:
-    if sigungu in SPECIFIC_EUPMYEONDONG:
-        dongs = SPECIFIC_EUPMYEONDONG[sigungu]
-        return dongs[seed_index % len(dongs)]
-    return "중앙동"
+def get_db_available_years() -> List[int]:
+    """실제 데이터베이스에 존재하는 연도 목록 반환 (오직 순수 실제 데이터 기준)"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT DISTINCT year FROM fire_records WHERE year IS NOT NULL ORDER BY year DESC")
+            years = [int(r[0]) for r in cur.fetchall() if r[0]]
+            conn.close()
+            if years:
+                return years
+        except Exception:
+            if conn:
+                conn.close()
+    return [get_kst_now().year]
 
 # ==========================================
 # 순수 실제 데이터 저장소 (SQLite & Memory)

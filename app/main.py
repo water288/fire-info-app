@@ -13,8 +13,6 @@ from app.services.fire_service import (
     REGIONS,
     FIRE_CAUSES,
     LOCATIONS,
-    SPECIFIC_EUPMYEONDONG,
-    get_eupmyeondong_for_region,
     get_kst_now,
     get_all_real_records,
     set_real_fire_records,
@@ -23,6 +21,7 @@ from app.services.fire_service import (
     calculate_real_statistics,
     query_real_fire_data,
     get_db_latest_date,
+    get_db_available_years,
     get_breaking_news_items,
     get_map_markers_data,
     ensure_sqlite_db
@@ -61,9 +60,9 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 app = FastAPI(
-    title="소방청 화재발생 데이터 통합 검색 & 분석 포털",
-    description="소방청 공공데이터포털 공식 API 연동 순수 실제 화재 정보 검색 및 분석 포털",
-    version="2.0.0",
+    title="소방청 공식 화재발생 데이터 포털",
+    description="소방청 공공데이터포털 공식 API 및 전국 17개 시·도 소방본부 공식 일일소방활동 순수 실제 화재 데이터 검색 및 분석 포털",
+    version="3.0.0",
     lifespan=lifespan
 )
 
@@ -104,8 +103,8 @@ async def sync_realtime_data():
 
 @app.get("/api/meta")
 def get_metadata():
-    """대한민국 17개 시·도 및 250개 시·군·구, 발화원인, 발생장소 표준 메타데이터 반환"""
-    years = list(range(2007, 2027))
+    """대한민국 17개 시·도 및 250개 시·군·구, 발화원인, 발생장소 표준 메타데이터 반환 (실제 데이터 기준)"""
+    years = get_db_available_years()
     latest_date = get_db_latest_date()
     return {
         "years": sorted(years, reverse=True),
@@ -303,21 +302,20 @@ def get_fire_stats(
 
 @app.get("/api/download-excel")
 async def download_excel():
-    """2007~2026년 소방청 화재발생 데이터 전체 엑셀 다운로드"""
+    """소방청 공식 화재발생 실제 데이터 전체 엑셀 다운로드"""
     base_dir = os.path.dirname(os.path.dirname(__file__))
     candidates = [
-        os.path.join(base_dir, "소방청_화재발생정보_전체DB.xlsx"),
-        os.path.join(base_dir, "korea_fire_data_2007_2026_826683.xlsx"),
-        os.path.join(base_dir, "2026-08-31_소방청 화재발생 상세-korea_fire_data_2007_2026_(826683건).xlsx")
+        os.path.join(base_dir, "소방청_공식_화재발생_실제DB.xlsx"),
+        os.path.join(base_dir, "소방청_화재발생정보_전체DB.xlsx")
     ]
     for p in candidates:
         if os.path.exists(p):
             return FileResponse(
                 path=p,
-                filename="소방청_화재발생정보_전체DB.xlsx",
+                filename="소방청_공식_화재발생_실제DB.xlsx",
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-    return await export_csv(start_year=2007, end_year=2026)
+    return await export_csv()
 
 
 @app.get("/api/test-api-key")
