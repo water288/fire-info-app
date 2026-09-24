@@ -606,22 +606,37 @@ def parse_region_hierarchy(location_str):
     return sido, sigungu, eupmyeondong
 
 def collect_from_samefiledel():
-    """samefiledel 소방청 화재 데이터베이스 최신 데이터 수집"""
-    same_json = os.path.join(os.path.dirname(BASE_DIR), "samefiledel", "src", "data", "nfa_fire_database.json")
-    if not os.path.exists(same_json):
+    """samefiledel 소방청 및 17개 시도 소방본부 일일상황보고 데이터베이스 연동 및 수집"""
+    same_dir = os.path.join(os.path.dirname(BASE_DIR), "samefiledel")
+    if not os.path.exists(same_dir):
         return []
-    print("[동기화] samefiledel 데이터베이스 연동...")
+    print("[동기화] samefiledel 17개 시·도 소방본부 일보 데이터셋 연동 중...")
     results = []
-    try:
-        with open(same_json, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        for item in data:
-            d = item.get("date") or (item.get("datetime") or "")[:10]
-            if not d or d < "2026-09-01":
-                continue
-            results.append(item)
-    except Exception as e:
-        print(f"samefiledel read error: {e}")
+    
+    target_files = [
+        ("daegu_final_ingest.json", "대구광역시", "대구소방안전본부 일일상황보고"),
+        ("daejeon_final_ingest.json", "대전광역시", "대전소방본부 일일소방활동상황"),
+        ("incheon_final_ingest.json", "인천광역시", "인천소방본부 일일소방활동상황"),
+        ("jeju_final_ingest.json", "제주특별자치도", "제주소방안전본부 소방종합상황일일보고"),
+        ("sejong_parsed_fires.json", "세종특별자치시", "세종특별자치시 소방본부 일일소방상황"),
+        ("ulsan_final_ingest.json", "울산광역시", "울산소방본부 일일소방상황")
+    ]
+    
+    for fname, def_sido, def_src in target_files:
+        p = os.path.join(same_dir, fname)
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    items = json.load(f)
+                for item in items:
+                    if not item.get("sido"):
+                        item["sido"] = def_sido
+                    if not item.get("source"):
+                        item["source"] = def_src
+                    results.append(item)
+            except Exception as e:
+                print(f"samefiledel {fname} read error: {e}")
+                
     return results
 
 def run_all_collectors():
