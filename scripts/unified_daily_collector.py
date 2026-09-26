@@ -213,8 +213,10 @@ def collect_nfa():
                                     loc = loc_m.group(1) if loc_m else "전국"
                                     lat, lng = get_coords(loc, f"NFA-{date_str}-{tm}")
                                     dmg = clean_money(line)
+                                    d_clean = date_str.replace("-", "")
+                                    t_clean = tm.replace(":", "")
                                     results.append({
-                                        "id": f"NFA-DAILY-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                        "id": f"NFA-DAILY-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                         "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                         "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                         "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -255,8 +257,10 @@ def collect_sejong():
                                 cause = cause_m.group(1).strip() if cause_m else "원인 조사 중"
                                 dmg = clean_money(block)
                                 lat, lng = get_coords(loc, f"SEJONG-{date_str}-{tm}")
+                                d_clean = date_str.replace("-", "")
+                                t_clean = tm.replace(":", "")
                                 results.append({
-                                    "id": f"SEJONG-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                    "id": f"SEJONG-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                     "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                     "location": loc, "address": loc, "bldg_type": "기타", "cause": cause,
                                     "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -294,8 +298,10 @@ def collect_jeju():
                         cause_m = re.search(r"원인\s*:\s*([^,\n\)]+)", section)
                         cause = cause_m.group(1).strip() if cause_m else "원인 조사 중"
                         dmg = clean_money(section)
+                        d_clean = date_str.replace("-", "")
+                        t_clean = tm.replace(":", "")
                         results.append({
-                            "id": f"JEJU-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                            "id": f"JEJU-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                             "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                             "location": loc, "address": loc, "bldg_type": "기타", "cause": cause,
                             "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -336,8 +342,10 @@ def collect_gangwon():
                                 loc = f"강원특별자치도 {loc_m.group(1)}" if loc_m else "강원특별자치도"
                                 lat, lng = get_coords(loc, f"GW-{date_str}-{tm}")
                                 dmg = clean_money(block)
+                                d_clean = date_str.replace("-", "")
+                                t_clean = tm.replace(":", "")
                                 results.append({
-                                    "id": f"GW-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                    "id": f"GW-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                     "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                     "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                     "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -380,8 +388,10 @@ def collect_daegu():
                                 loc = f"대구광역시 {loc_m.group(1)}" if loc_m else "대구광역시"
                                 lat, lng = get_coords(loc, f"DAEGU-{date_str}-{tm}")
                                 dmg = clean_money(block)
+                                d_clean = date_str.replace("-", "")
+                                t_clean = tm.replace(":", "")
                                 results.append({
-                                    "id": f"DAEGU-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                    "id": f"DAEGU-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                     "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                     "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                     "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -421,8 +431,10 @@ def collect_incheon():
                                 loc = f"인천광역시 {loc_m.group(1)}" if loc_m else "인천광역시"
                                 lat, lng = get_coords(loc, f"INCHEON-{date_str}-{tm}")
                                 dmg = clean_money(block)
+                                d_clean = date_str.replace("-", "")
+                                t_clean = tm.replace(":", "")
                                 results.append({
-                                    "id": f"INCHEON-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                    "id": f"INCHEON-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                     "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                     "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                     "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -470,8 +482,10 @@ def collect_daejeon():
                                         loc = f"대전광역시 {loc_m.group(1)}" if loc_m else "대전광역시"
                                         lat, lng = get_coords(loc, f"DAEJEON-{date_str}-{tm}")
                                         dmg = clean_money(block)
+                                        d_clean = date_str.replace("-", "")
+                                        t_clean = tm.replace(":", "")
                                         results.append({
-                                            "id": f"DAEJEON-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                            "id": f"DAEJEON-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                             "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                             "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                             "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
@@ -514,8 +528,10 @@ def collect_ulsan():
                                 loc = f"울산광역시 {loc_m.group(1)}" if loc_m else "울산광역시"
                                 lat, lng = get_coords(loc, f"ULSAN-{date_str}-{tm}")
                                 dmg = clean_money(block)
+                                d_clean = date_str.replace("-", "")
+                                t_clean = tm.replace(":", "")
                                 results.append({
-                                    "id": f"ULSAN-FIRE-{date_str.replace("-","")}-{tm.replace(":","")}-{len(results)+1:03d}",
+                                    "id": f"ULSAN-FIRE-{d_clean}-{t_clean}-{len(results)+1:03d}",
                                     "date": date_str, "time": tm, "datetime": f"{date_str} {tm}",
                                     "location": loc, "address": loc, "bldg_type": "기타", "cause": "원인 조사 중",
                                     "casualties": {"killed": 0, "injured": 0, "total": 0}, "property_damage": dmg, "damage": dmg,
